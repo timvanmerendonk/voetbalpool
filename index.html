@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WK Poule Overzicht</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">WK 2026 Poule</p>
+          <h1>Poule-overzicht</h1>
+        </div>
+        <div class="status-pill" id="lastUpdated">Data laden...</div>
+      </header>
+
+      <div class="overview-grid">
+        <section class="panel leaderboard-panel" aria-labelledby="leaderboardTitle">
+          <div class="panel-heading">
+            <div>
+              <h2 id="leaderboardTitle">Stand</h2>
+              <p>Gesorteerd op punten, doelsaldo en winkans.</p>
+            </div>
+          </div>
+          <div class="leaderboard" id="leaderboard">
+            <div class="loading-line"></div>
+            <div class="loading-line short"></div>
+          </div>
+        </section>
+
+        <section class="panel chart-panel" aria-labelledby="chartTitle">
+          <div class="panel-heading">
+            <div>
+              <h2 id="chartTitle">Puntenontwikkeling</h2>
+              <p>Top 5 uit de huidige stand.</p>
+            </div>
+            <div class="chart-legend" id="chartLegend"></div>
+          </div>
+          <div class="chart-wrap">
+            <svg id="pointsChart" role="img" aria-label="Puntenontwikkeling per speler"></svg>
+            <div class="empty-state" id="chartEmpty" hidden>Nog geen puntenontwikkeling beschikbaar.</div>
+            <div class="chart-tooltip" id="chartTooltip" hidden></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel schedule-panel" aria-labelledby="scheduleTitle">
+        <div class="panel-heading">
+          <div>
+            <h2 id="scheduleTitle">Speelschema</h2>
+            <p>Filter op fase en bekijk status, score en doorgangers.</p>
+          </div>
+          <button class="ghost-button" id="currentPhaseButton" type="button">Actuele fase</button>
+        </div>
+        <nav class="phase-scroller" id="phaseScroller" aria-label="Fases"></nav>
+        <div class="schedule-list" id="scheduleList"></div>
+      </section>
+    </main>
+
+    <script src="./dashboard_data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
