@@ -452,7 +452,12 @@ function drawChart() {
   const allowed = new Set(orderedChartNames);
   const rows = state.history
     .filter((row) => allowed.has(row.player_name))
-    .map((row) => ({ ...row, sequence_number: Number(row.sequence_number || 0), points: Number(row.points || 0) }));
+    .map((row) => ({
+      ...row,
+      sequence_number: Number(row.sequence_number || 0),
+      points: Number(row.points || 0),
+      points_delta: Number(row.points_delta || 0),
+    }));
 
   dom.chartLegend.innerHTML = "";
 
@@ -490,7 +495,9 @@ function drawChart() {
     const last = values[values.length - 1];
     const circles = values.map((row) => `
       <circle cx="${x(row.sequence_number)}" cy="${y(row.points) + pointOffset(pointOffsets, name, row)}" r="4" fill="${playerColor(name)}"
-        data-name="${escapeHtml(name)}" data-points="${row.points}" data-sequence="${row.sequence_number}" />
+        data-name="${escapeHtml(name)}" data-points="${row.points}" data-sequence="${row.sequence_number}"
+        data-home="${escapeHtml(row.home_team || "")}" data-away="${escapeHtml(row.away_team || "")}"
+        data-delta="${row.points_delta}" />
     `).join("");
     const markerX = last ? x(last.sequence_number) + 22 + (endpointOffsets.get(name) || 0) : 0;
     const endMarker = last ? `
@@ -531,10 +538,22 @@ function drawChart() {
 function showTooltip(event, target) {
   if (!target.dataset.name) return;
   dom.tooltip.hidden = false;
-  dom.tooltip.innerHTML = `
-    <strong>${target.dataset.name}</strong><br>
-    ${target.dataset.points} punten | na ${target.dataset.sequence} wedstrijden
-  `;
+  const hasMatch = target.dataset.home || target.dataset.away;
+  const delta = Number(target.dataset.delta || 0);
+  dom.tooltip.innerHTML = hasMatch
+    ? `
+      <div class="chart-tooltip-title">${escapeHtml(target.dataset.name)}</div>
+      <div class="chart-tooltip-score">${target.dataset.points} punten</div>
+      <div class="chart-tooltip-detail">
+        <span>Wedstrijd ${target.dataset.sequence}</span>
+        <strong>${teamAbbreviation(target.dataset.home)} - ${teamAbbreviation(target.dataset.away)}</strong>
+        <span>levert ${delta} ${delta === 1 ? "punt" : "punten"} op</span>
+      </div>
+    `
+    : `
+      <div class="chart-tooltip-title">${escapeHtml(target.dataset.name)}</div>
+      <div class="chart-tooltip-score">${target.dataset.points} punten</div>
+    `;
   const wrap = dom.chart.getBoundingClientRect();
   dom.tooltip.style.left = `${event.clientX - wrap.left}px`;
   dom.tooltip.style.top = `${event.clientY - wrap.top}px`;
@@ -625,6 +644,29 @@ function pointOffset(offsets, name, row) {
 
 function compactInitials(name) {
   return initials(name).replaceAll(".", "");
+}
+
+function teamAbbreviation(team) {
+  const special = {
+    "Bosnië en Herzegovina": "BIH",
+    "Curaçao": "CUW",
+    "DR Congo": "COD",
+    "Ivoorkust": "CIV",
+    "Kaapverdië": "CPV",
+    "Nieuw-Zeeland": "NZL",
+    "Saoedi-Arabië": "KSA",
+    "Verenigde Staten": "VS",
+    "Zuid-Afrika": "ZA",
+    "Zuid-Korea": "ZK",
+  };
+  if (special[team]) return special[team];
+  return String(team || "")
+    .split(/[\s-]+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
 }
 
 function makeXTicks(maxX) {
