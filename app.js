@@ -546,7 +546,7 @@ function showTooltip(event, target) {
       <div class="chart-tooltip-score">${target.dataset.points} punten</div>
       <div class="chart-tooltip-detail">
         <span>Wedstrijd ${target.dataset.sequence}</span>
-        <strong>${teamAbbreviation(target.dataset.home)} - ${teamAbbreviation(target.dataset.away)}</strong>
+        <strong>${escapeHtml(target.dataset.home)} - ${escapeHtml(target.dataset.away)}</strong>
         <span>levert ${delta} ${delta === 1 ? "punt" : "punten"} op</span>
       </div>
     `
@@ -644,29 +644,6 @@ function pointOffset(offsets, name, row) {
 
 function compactInitials(name) {
   return initials(name).replaceAll(".", "");
-}
-
-function teamAbbreviation(team) {
-  const special = {
-    "Bosnië en Herzegovina": "BIH",
-    "Curaçao": "CUW",
-    "DR Congo": "COD",
-    "Ivoorkust": "CIV",
-    "Kaapverdië": "CPV",
-    "Nieuw-Zeeland": "NZL",
-    "Saoedi-Arabië": "KSA",
-    "Verenigde Staten": "VS",
-    "Zuid-Afrika": "ZA",
-    "Zuid-Korea": "ZK",
-  };
-  if (special[team]) return special[team];
-  return String(team || "")
-    .split(/[\s-]+/)
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 3)
-    .toUpperCase();
 }
 
 function makeXTicks(maxX) {
