@@ -84,6 +84,7 @@ const state = {
   history: [],
   activePhase: "Group",
   playerColors: new Map(),
+  pinnedTooltip: null,
 };
 
 const dom = {
@@ -121,6 +122,7 @@ async function init() {
 
     render();
     window.addEventListener("resize", () => drawChart());
+    document.addEventListener("pointerdown", closePinnedTooltipsOnOutsidePress);
   } catch (error) {
     showLoadError(error);
   }
@@ -267,10 +269,20 @@ function bindPickedTeamTooltips() {
     document.body.appendChild(dom.hoverCard);
   }
   document.querySelectorAll(".picked-team").forEach((dot) => {
-    dot.addEventListener("pointerenter", (event) => showPickedTeamTooltip(event, dot));
-    dot.addEventListener("pointermove", (event) => positionPickedTeamTooltip(event));
+    dot.addEventListener("pointerenter", (event) => {
+      if (!state.pinnedTooltip || state.pinnedTooltip === "team") showPickedTeamTooltip(event, dot);
+    });
+    dot.addEventListener("pointermove", (event) => {
+      if (state.pinnedTooltip !== "team") positionPickedTeamTooltip(event);
+    });
     dot.addEventListener("pointerleave", () => {
-      dom.hoverCard.hidden = true;
+      if (state.pinnedTooltip !== "team") dom.hoverCard.hidden = true;
+    });
+    dot.addEventListener("click", (event) => {
+      event.stopPropagation();
+      dom.tooltip.hidden = true;
+      showPickedTeamTooltip(event, dot);
+      state.pinnedTooltip = "team";
     });
   });
 }
@@ -535,10 +547,20 @@ function drawChart() {
   `;
 
   dom.chart.querySelectorAll("circle[data-name], .chart-end-marker[data-name]").forEach((target) => {
-    target.addEventListener("pointerenter", (event) => showTooltip(event, target));
-    target.addEventListener("pointermove", (event) => showTooltip(event, target));
+    target.addEventListener("pointerenter", (event) => {
+      if (!state.pinnedTooltip || state.pinnedTooltip === "chart") showTooltip(event, target);
+    });
+    target.addEventListener("pointermove", (event) => {
+      if (state.pinnedTooltip !== "chart") showTooltip(event, target);
+    });
     target.addEventListener("pointerleave", () => {
-      dom.tooltip.hidden = true;
+      if (state.pinnedTooltip !== "chart") dom.tooltip.hidden = true;
+    });
+    target.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (dom.hoverCard) dom.hoverCard.hidden = true;
+      showTooltip(event, target);
+      state.pinnedTooltip = "chart";
     });
   });
 }
@@ -565,6 +587,18 @@ function showTooltip(event, target) {
   const wrap = dom.chart.getBoundingClientRect();
   dom.tooltip.style.left = `${event.clientX - wrap.left}px`;
   dom.tooltip.style.top = `${event.clientY - wrap.top}px`;
+}
+
+function closePinnedTooltipsOnOutsidePress(event) {
+  const target = event.target;
+  const isPickedTeam = Boolean(target.closest?.(".picked-team"));
+  const isTeamTooltip = Boolean(target.closest?.(".team-hover-card"));
+  const isChartTarget = Boolean(target.closest?.("#pointsChart circle[data-name], #pointsChart .chart-end-marker[data-name]"));
+  const isChartTooltip = Boolean(target.closest?.("#chartTooltip"));
+  if (isPickedTeam || isTeamTooltip || isChartTarget || isChartTooltip) return;
+  state.pinnedTooltip = null;
+  if (dom.hoverCard) dom.hoverCard.hidden = true;
+  dom.tooltip.hidden = true;
 }
 
 function detectCurrentPhase(schedule) {
