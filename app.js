@@ -350,9 +350,9 @@ function renderSchedule() {
           <strong>${escapeHtml(match.stage_label || phaseLabel(match.stage))}</strong>
           <div>${matchDateText(match)}</div>
         </div>
-        ${teamBlock(match.home_team, false, match.qualified_team)}
+        ${teamBlock(match.home_team, false, match.qualified_team, match)}
         <div class="score">${escapeHtml(match.regular_score || "vs")}</div>
-        ${teamBlock(match.away_team, true, match.qualified_team)}
+        ${teamBlock(match.away_team, true, match.qualified_team, match)}
         <div class="match-status">
           <span class="status-label ${statusClass(match.status)}">${escapeHtml(match.status || "Onbekend")}</span>
           ${match.qualified_team ? `<div class="team-code">Door: ${escapeHtml(match.qualified_team)}</div>` : ""}
@@ -432,8 +432,8 @@ function formatAmsterdamTime(date) {
   }).format(date);
 }
 
-function teamBlock(team, away = false, qualifiedTeam = "") {
-  const label = displayTeamName(team);
+function teamBlock(team, away = false, qualifiedTeam = "", match = {}) {
+  const label = scheduleTeamLabel(team, match);
   const avatar = isBracketSlot(team) ? slotAvatar(team) : flagFallback(team);
   const qualified = qualifiedTeam && team === qualifiedTeam;
   return `
@@ -445,6 +445,14 @@ function teamBlock(team, away = false, qualifiedTeam = "") {
       <span class="team-name">${escapeHtml(label)}</span>
     </div>
   `;
+}
+
+function scheduleTeamLabel(team, match) {
+  const label = displayTeamName(team);
+  if (match.stage === "Group" && match.group && !isBracketSlot(team)) {
+    return `${label} (${match.group})`;
+  }
+  return label;
 }
 
 function drawChart() {
