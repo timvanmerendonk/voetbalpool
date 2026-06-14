@@ -576,6 +576,7 @@ function renderLeaderboard() {
     .join("");
   bindPickedTeamTooltips();
   bindMetricHelpTooltips();
+  bindPendingPointTooltips();
 }
 
 function metric(label, value, helpText = "") {
@@ -589,7 +590,7 @@ function pointsWithPending(points, pending) {
   const pendingPoints = Number(pending || 0);
   if (pendingPoints <= 0) return points;
   const label = `${pendingPoints} ${pendingPoints === 1 ? "punt is" : "punten zijn"} al verdiend, maar tellen pas mee vanaf de volgende mijlpaal.`;
-  return `${points} <small class="pending-points" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">(+${pendingPoints})</small>`;
+  return `${points} <small class="pending-points" data-help="${escapeHtml(label)}" aria-label="${escapeHtml(label)}" tabindex="0">(+${pendingPoints})</small>`;
 }
 
 function pickedTeamDots(playerName) {
@@ -671,6 +672,43 @@ function bindMetricHelpTooltips() {
       if (dom.hoverCard) dom.hoverCard.hidden = true;
       if (dom.tooltip) dom.tooltip.hidden = true;
       showMetricHelp(event, button);
+      state.pinnedTooltip = "metric";
+    });
+  });
+}
+
+function bindPendingPointTooltips() {
+  if (!dom.metricHelpCard) {
+    dom.metricHelpCard = document.createElement("div");
+    dom.metricHelpCard.className = "metric-help-card";
+    dom.metricHelpCard.hidden = true;
+    document.body.appendChild(dom.metricHelpCard);
+  }
+  document.querySelectorAll(".pending-points").forEach((points) => {
+    const openHelp = (event) => {
+      if (!state.pinnedTooltip || state.pinnedTooltip === "metric") showMetricHelp(event, points);
+    };
+    const moveHelp = (event) => {
+      if (state.pinnedTooltip !== "metric") positionMetricHelp(event);
+    };
+    const closeHelp = () => {
+      if (state.pinnedTooltip !== "metric") dom.metricHelpCard.hidden = true;
+    };
+    points.addEventListener("pointerenter", openHelp);
+    points.addEventListener("pointerover", openHelp);
+    points.addEventListener("mouseenter", openHelp);
+    points.addEventListener("mouseover", openHelp);
+    points.addEventListener("pointermove", moveHelp);
+    points.addEventListener("mousemove", moveHelp);
+    points.addEventListener("pointerleave", closeHelp);
+    points.addEventListener("mouseleave", closeHelp);
+    points.addEventListener("focus", (event) => showMetricHelp(event, points));
+    points.addEventListener("blur", closeHelp);
+    points.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (dom.hoverCard) dom.hoverCard.hidden = true;
+      if (dom.tooltip) dom.tooltip.hidden = true;
+      showMetricHelp(event, points);
       state.pinnedTooltip = "metric";
     });
   });
@@ -1086,7 +1124,7 @@ function closePinnedTooltipsOnOutsidePress(event) {
   const target = event.target;
   const isPickedTeam = Boolean(target.closest?.(".picked-team"));
   const isTeamTooltip = Boolean(target.closest?.(".team-hover-card"));
-  const isMetricHelp = Boolean(target.closest?.(".metric-help"));
+  const isMetricHelp = Boolean(target.closest?.(".metric-help, .pending-points"));
   const isMetricTooltip = Boolean(target.closest?.(".metric-help-card"));
   const isChartTarget = Boolean(target.closest?.("#pointsChart circle[data-name], #pointsChart .chart-end-marker[data-name]"));
   const isChartTooltip = Boolean(target.closest?.("#chartTooltip"));
