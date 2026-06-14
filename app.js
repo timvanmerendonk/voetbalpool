@@ -550,6 +550,8 @@ function renderLeaderboard() {
   dom.leaderboard.innerHTML = state.results
     .map((player, index) => {
       const color = playerColor(player.name);
+      const winChance = formatPercent(player.win_probability);
+      const winChanceHelp = `Van alle mogelijke manieren waarop het toernooi verder kan lopen, eindigt ${player.name} in ${winChance} bovenaan.`;
       return `
         <article class="leader-row">
           <div class="player-avatar" style="background:${color}">${initials(player.name)}</div>
@@ -568,7 +570,7 @@ function renderLeaderboard() {
           <div class="leader-metrics">
             ${metric("Punten", pointsWithPending(player.current_points, player.current_pending_points))}
             ${metric("Doelsaldo", signed(player.current_goal_difference))}
-            ${metric("Winkans", formatPercent(player.win_probability), "Van alle mogelijke manieren waarop het toernooi verder kan lopen, eindigt deze speler in zoveel procent bovenaan.")}
+            ${metric("Winkans", winChance, winChanceHelp)}
           </div>
         </article>
       `;
