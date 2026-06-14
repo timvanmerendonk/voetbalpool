@@ -301,7 +301,7 @@ function renderPendingMomentum() {
   dom.momentumContent.innerHTML = `
     <div class="momentum-kicker">Verdiend, maar nog niet officieel meegeteld</div>
     <div class="momentum-bars">
-      ${rows.map((row) => momentumBar(row.name, row.pending, `${row.actual} werkelijk`, maxPending, "pending")).join("")}
+      ${rows.map((row) => momentumBar(row.name, row.pending, "", maxPending, "pending")).join("")}
     </div>
   `;
 }
