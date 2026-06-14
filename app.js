@@ -617,7 +617,7 @@ function renderLeaderboard() {
           </div>
           ${metric("Punten", pointsWithPending(player.current_points, player.current_pending_points))}
           ${metric("Doelsaldo", signed(player.current_goal_difference))}
-          ${metric("Winkans", formatPercent(player.win_probability))}
+          ${metric("Winkans", formatPercent(player.win_probability), "Winkans is het percentage simulaties waarin deze speler de pool wint. De kans is gebaseerd op 10.000 doorgerekende toernooiscenario's.")}
         </article>
       `;
     })
@@ -625,8 +625,11 @@ function renderLeaderboard() {
   bindPickedTeamTooltips();
 }
 
-function metric(label, value) {
-  return `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`;
+function metric(label, value, helpText = "") {
+  const help = helpText
+    ? `<span class="metric-help" title="${escapeHtml(helpText)}" aria-label="${escapeHtml(helpText)}" tabindex="0">?</span>`
+    : "";
+  return `<div class="metric"><span>${label}${help}</span><strong>${value}</strong></div>`;
 }
 
 function pointsWithPending(points, pending) {
