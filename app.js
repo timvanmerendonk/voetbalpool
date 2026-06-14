@@ -104,12 +104,12 @@ const state = {
 const dom = {
   topTabs: document.querySelectorAll(".top-tab"),
   tabPanels: document.querySelectorAll(".tab-panel"),
-  summaryStats: document.querySelector("#summaryStats"),
   leaderboard: document.querySelector("#leaderboard"),
   momentumTabs: document.querySelector("#momentumTabs"),
   momentumContent: document.querySelector("#momentumContent"),
   tooltip: document.querySelector("#chartTooltip"),
   hoverCard: null,
+  metricHelpCard: null,
   upcomingList: document.querySelector("#upcomingList"),
   phaseScroller: document.querySelector("#phaseScroller"),
   scheduleList: document.querySelector("#scheduleList"),
@@ -164,7 +164,6 @@ function render() {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(generatedAt)}`;
-  renderSummaryStats();
   renderLeaderboard();
   renderMomentum();
   renderUpcomingMatches();
@@ -200,31 +199,6 @@ function bindScheduleControls() {
     state.poolRelevantOnly = Boolean(dom.poolRelevantToggle.checked);
     renderSchedule();
   });
-}
-
-function renderSummaryStats() {
-  const participantCount = state.players.length || state.results.length;
-  const mostPicked = mostPickedTeam();
-  const finalDate = tournamentFinalDate();
-  const daysToFinal = finalDate ? Math.max(0, Math.ceil((finalDate.getTime() - Date.now()) / 86400000)) : "-";
-  const scoringText = "Landen scoren met winst, gelijkspel en bonussen voor doorgaan.";
-  dom.summaryStats.innerHTML = [
-    statCard("Deelnemers", participantCount, "spelers doen mee"),
-    statCard("Meest gekozen team", mostPicked?.team || "-", mostPicked ? `${mostPicked.count} keer gekozen` : "geen keuzes"),
-    statCard("Scoring", "3 / 1 / +1", scoringText),
-    statCard("Dagen tot WK-finale", daysToFinal, finalDate ? matchDateHeading({ match_date: finalDateLabel(finalDate), match_time: "00:00", utc_offset: "UTC+0" }) : "nog niet ingepland"),
-  ].join("");
-}
-
-function statCard(label, value, detail) {
-  return `
-    <article class="stat-card">
-      <i aria-hidden="true"></i>
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(value)}</strong>
-      <p>${escapeHtml(detail)}</p>
-    </article>
-  `;
 }
 
 function renderMomentum() {
@@ -329,32 +303,17 @@ function renderMilestoneMomentum() {
 
 function momentumBar(name, value, detail, maxValue, mode = "") {
   const width = Math.max(3, (Number(value || 0) / maxValue) * 100);
+  const detailMarkup = detail ? `<span>${escapeHtml(detail)}</span>` : "";
   return `
     <article class="momentum-row ${mode}">
       <div>
         <strong>${escapeHtml(name)}</strong>
-        <span>${escapeHtml(detail)}</span>
+        ${detailMarkup}
       </div>
       <div class="bar-wrap"><span style="width:${width}%"></span></div>
       <b>${value > 0 ? `+${value}` : value}</b>
     </article>
   `;
-}
-
-function mostPickedTeam() {
-  const counts = new Map();
-  for (const player of state.players) {
-    for (const team of player.teams || []) {
-      counts.set(team.name, (counts.get(team.name) || 0) + 1);
-    }
-  }
-  const [team, count] = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "nl"))[0] || [];
-  return team ? { team, count } : null;
-}
-
-function tournamentFinalDate() {
-  const finalMatch = state.schedule.find((match) => match.stage === "Final");
-  return finalMatch ? amsterdamMatchDate(finalMatch) : null;
 }
 
 function milestoneProgress() {
@@ -384,15 +343,6 @@ function chosenTeamCounts() {
 
 function chosenTeamSet() {
   return new Set(chosenTeamCounts().keys());
-}
-
-function finalDateLabel(date) {
-  return new Intl.DateTimeFormat("nl-NL", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "Europe/Amsterdam",
-  }).format(date);
 }
 
 function renderUpcomingMatches() {
@@ -615,19 +565,22 @@ function renderLeaderboard() {
               ${pickedTeamDots(player.name)}
             </div>
           </div>
-          ${metric("Punten", pointsWithPending(player.current_points, player.current_pending_points))}
-          ${metric("Doelsaldo", signed(player.current_goal_difference))}
-          ${metric("Winkans", formatPercent(player.win_probability), "Winkans is het percentage simulaties waarin deze speler de pool wint. De kans is gebaseerd op 10.000 doorgerekende toernooiscenario's.")}
+          <div class="leader-metrics">
+            ${metric("Punten", pointsWithPending(player.current_points, player.current_pending_points))}
+            ${metric("Doelsaldo", signed(player.current_goal_difference))}
+            ${metric("Winkans", formatPercent(player.win_probability), "Van 10.000 mogelijke manieren waarop het toernooi verder kan lopen, eindigt deze speler in zoveel procent bovenaan. Het is geen gewone voorspelling van hoe sterk de landen zijn.")}
+          </div>
         </article>
       `;
     })
     .join("");
   bindPickedTeamTooltips();
+  bindMetricHelpTooltips();
 }
 
 function metric(label, value, helpText = "") {
   const help = helpText
-    ? `<span class="metric-help" title="${escapeHtml(helpText)}" aria-label="${escapeHtml(helpText)}" tabindex="0">?</span>`
+    ? `<button class="metric-help" type="button" data-help="${escapeHtml(helpText)}" aria-label="${escapeHtml(helpText)}" title="${escapeHtml(helpText)}">?</button>`
     : "";
   return `<div class="metric"><span>${label}${help}</span><strong>${value}</strong></div>`;
 }
@@ -682,6 +635,63 @@ function bindPickedTeamTooltips() {
       state.pinnedTooltip = "team";
     });
   });
+}
+
+function bindMetricHelpTooltips() {
+  if (!dom.metricHelpCard) {
+    dom.metricHelpCard = document.createElement("div");
+    dom.metricHelpCard.className = "metric-help-card";
+    dom.metricHelpCard.hidden = true;
+    document.body.appendChild(dom.metricHelpCard);
+  }
+  document.querySelectorAll(".metric-help").forEach((button) => {
+    const openHelp = (event) => {
+      if (!state.pinnedTooltip || state.pinnedTooltip === "metric") showMetricHelp(event, button);
+    };
+    const moveHelp = (event) => {
+      if (state.pinnedTooltip !== "metric") positionMetricHelp(event);
+    };
+    const closeHelp = () => {
+      if (state.pinnedTooltip !== "metric") dom.metricHelpCard.hidden = true;
+    };
+    button.addEventListener("pointerenter", openHelp);
+    button.addEventListener("pointerover", openHelp);
+    button.addEventListener("mouseenter", openHelp);
+    button.addEventListener("mouseover", openHelp);
+    button.addEventListener("pointermove", moveHelp);
+    button.addEventListener("mousemove", moveHelp);
+    button.addEventListener("pointerleave", closeHelp);
+    button.addEventListener("mouseleave", closeHelp);
+    button.addEventListener("focus", (event) => showMetricHelp(event, button));
+    button.addEventListener("blur", () => {
+      if (state.pinnedTooltip !== "metric") dom.metricHelpCard.hidden = true;
+    });
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (dom.hoverCard) dom.hoverCard.hidden = true;
+      if (dom.tooltip) dom.tooltip.hidden = true;
+      showMetricHelp(event, button);
+      state.pinnedTooltip = "metric";
+    });
+  });
+}
+
+function showMetricHelp(event, button) {
+  dom.metricHelpCard.textContent = button.dataset.help || "";
+  dom.metricHelpCard.hidden = false;
+  positionMetricHelp(event);
+}
+
+function positionMetricHelp(event) {
+  const margin = 14;
+  const rect = dom.metricHelpCard.getBoundingClientRect();
+  const sourceRect = event.currentTarget?.getBoundingClientRect?.();
+  const x = event.clientX || (sourceRect ? sourceRect.left + sourceRect.width / 2 : margin);
+  const y = event.clientY || (sourceRect ? sourceRect.bottom : margin);
+  const left = Math.min(window.innerWidth - rect.width - margin, Math.max(margin, x + margin));
+  const top = Math.min(window.innerHeight - rect.height - margin, Math.max(margin, y + margin));
+  dom.metricHelpCard.style.left = `${left}px`;
+  dom.metricHelpCard.style.top = `${top}px`;
 }
 
 function showPickedTeamTooltip(event, dot) {
@@ -741,7 +751,7 @@ function renderSchedule() {
   const selectedTeams = chosenTeamSet();
   const matches = state.schedule
     .filter((match) => match.stage === state.activePhase)
-    .filter((match) => !state.poolRelevantOnly || selectedTeams.has(match.home_team) || selectedTeams.has(match.away_team))
+    .filter((match) => !state.poolRelevantOnly || isPoolRelevantMatch(match, selectedTeams))
     .sort(compareMatchesByAmsterdamTime);
   if (!matches.length) {
     dom.scheduleList.innerHTML = `<div class="empty-state">Geen wedstrijden gevonden voor deze fase.</div>`;
@@ -757,6 +767,14 @@ function renderSchedule() {
     scheduleGroup("Nog te spelen", upcoming, true),
     played.length ? scheduleGroup("Gespeelde wedstrijden", played, false) : "",
   ].join("");
+}
+
+function isPoolRelevantMatch(match, selectedTeams) {
+  if (selectedTeams.has(match.home_team) || selectedTeams.has(match.away_team) || selectedTeams.has(match.qualified_team)) {
+    return true;
+  }
+  const unresolvedKnockout = match.stage !== "Group" && (isBracketSlot(match.home_team) || isBracketSlot(match.away_team));
+  return match.status !== "Gespeeld" && unresolvedKnockout;
 }
 
 function scheduleGroup(title, matches, open) {
@@ -1068,11 +1086,14 @@ function closePinnedTooltipsOnOutsidePress(event) {
   const target = event.target;
   const isPickedTeam = Boolean(target.closest?.(".picked-team"));
   const isTeamTooltip = Boolean(target.closest?.(".team-hover-card"));
+  const isMetricHelp = Boolean(target.closest?.(".metric-help"));
+  const isMetricTooltip = Boolean(target.closest?.(".metric-help-card"));
   const isChartTarget = Boolean(target.closest?.("#pointsChart circle[data-name], #pointsChart .chart-end-marker[data-name]"));
   const isChartTooltip = Boolean(target.closest?.("#chartTooltip"));
-  if (isPickedTeam || isTeamTooltip || isChartTarget || isChartTooltip) return;
+  if (isPickedTeam || isTeamTooltip || isMetricHelp || isMetricTooltip || isChartTarget || isChartTooltip) return;
   state.pinnedTooltip = null;
   if (dom.hoverCard) dom.hoverCard.hidden = true;
+  if (dom.metricHelpCard) dom.metricHelpCard.hidden = true;
   if (dom.tooltip) dom.tooltip.hidden = true;
 }
 
