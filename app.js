@@ -551,7 +551,7 @@ function renderLeaderboard() {
     .map((player, index) => {
       const color = playerColor(player.name);
       const winChance = formatPercent(player.win_probability);
-      const winChanceHelp = `Van alle mogelijke manieren waarop het toernooi verder kan lopen, eindigt ${player.name} in ${winChance} bovenaan.`;
+      const winChanceHelp = `Van alle mogelijke manieren waarop het toernooi verder kan lopen, eindigt ${firstName(player.name)} in ${winChance} bovenaan.`;
       return `
         <article class="leader-row">
           <div class="player-avatar" style="background:${color}">${initials(player.name)}</div>
