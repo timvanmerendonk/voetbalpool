@@ -568,7 +568,7 @@ function renderLeaderboard() {
           <div class="leader-metrics">
             ${metric("Punten", pointsWithPending(player.current_points, player.current_pending_points))}
             ${metric("Doelsaldo", signed(player.current_goal_difference))}
-            ${metric("Winkans", formatPercent(player.win_probability), "Van 10.000 mogelijke manieren waarop het toernooi verder kan lopen, eindigt deze speler in zoveel procent bovenaan. Het is geen gewone voorspelling van hoe sterk de landen zijn.")}
+            ${metric("Winkans", formatPercent(player.win_probability), "Van alle mogelijke manieren waarop het toernooi verder kan lopen, eindigt deze speler in zoveel procent bovenaan.")}
           </div>
         </article>
       `;
