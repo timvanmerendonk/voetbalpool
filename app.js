@@ -239,32 +239,50 @@ function renderMomentum() {
 }
 
 function renderLatestMomentum() {
-  const latestSequence = Math.max(...state.history.map((row) => Number(row.sequence_number || 0)), 0);
-  const latestRows = state.history
-    .filter((row) => Number(row.sequence_number || 0) === latestSequence)
-    .map((row) => ({
-      name: row.player_name,
-      points: Number(row.actual_points || row.points || 0),
-      delta: Number(row.actual_points_delta || row.points_delta || 0),
-      home: row.home_team,
-      away: row.away_team,
-    }))
-    .sort((a, b) => b.delta - a.delta || b.points - a.points || a.name.localeCompare(b.name, "nl"))
-    .slice(0, 8);
-
-  if (!latestRows.length) {
-    dom.momentumContent.innerHTML = `<div class="empty-state compact">Nog geen gespeelde wedstrijden.</div>`;
+  const comparison = latestMilestoneComparison();
+  if (!comparison.rows.length) {
+    dom.momentumContent.innerHTML = `<div class="empty-state compact">Nog geen mijlpaalgegevens beschikbaar.</div>`;
     return;
   }
 
-  const matchLabel = `${latestRows[0].home} - ${latestRows[0].away}`;
-  const maxDelta = Math.max(...latestRows.map((row) => row.delta), 1);
+  const maxDelta = Math.max(...comparison.rows.map((row) => row.delta), 1);
   dom.momentumContent.innerHTML = `
-    <div class="momentum-kicker">Laatste wedstrijd: ${escapeHtml(matchLabel)}</div>
+    <div class="momentum-kicker">${escapeHtml(comparison.label)}</div>
     <div class="momentum-bars">
-      ${latestRows.map((row) => momentumBar(row.name, row.delta, `${row.points} totaal`, maxDelta)).join("")}
+      ${comparison.rows.map((row) => momentumBar(row.name, row.delta, `${row.points} totaal`, maxDelta)).join("")}
     </div>
   `;
+}
+
+function latestMilestoneComparison() {
+  const milestoneLabels = [...new Set(state.history.map((row) => row.milestone_label || "Start toernooi"))];
+  const latestLabel = milestoneLabels.at(-1) || "Start toernooi";
+  const previousLabel = milestoneLabels.length > 1 ? milestoneLabels.at(-2) : null;
+  const latestRows = lastRowsForMilestone(latestLabel);
+  const previousRows = previousLabel ? lastRowsForMilestone(previousLabel) : [];
+  const previousPoints = new Map(previousRows.map((row) => [row.player_name, Number(row.actual_points || row.points || 0)]));
+  const rows = latestRows
+    .map((row) => {
+      const points = Number(row.actual_points || row.points || 0);
+      const previous = previousPoints.get(row.player_name) || 0;
+      return {
+        name: row.player_name,
+        points,
+        delta: points - previous,
+      };
+    })
+    .sort((a, b) => b.delta - a.delta || b.points - a.points || a.name.localeCompare(b.name, "nl"))
+    .slice(0, 8);
+  const label = previousLabel
+    ? `${previousLabel} naar ${latestLabel}`
+    : `Sinds ${latestLabel.toLowerCase()}`;
+  return { label, rows };
+}
+
+function lastRowsForMilestone(label) {
+  const rows = state.history.filter((row) => (row.milestone_label || "Start toernooi") === label);
+  const latestSequence = Math.max(...rows.map((row) => Number(row.sequence_number || 0)), 0);
+  return rows.filter((row) => Number(row.sequence_number || 0) === latestSequence);
 }
 
 function renderPendingMomentum() {
@@ -585,10 +603,14 @@ function renderLeaderboard() {
           <div class="player-avatar" style="background:${color}">${initials(player.name)}</div>
           <div class="player-info">
             <div class="player-name">
-              <strong><span class="rank">#${index + 1}</span> ${escapeHtml(player.name)}</strong>
-            </div>
-            <div class="picked-teams" aria-label="Gekozen landen van ${escapeHtml(player.name)}">
-              ${pickedTeamDots(player.name)}
+              <strong title="${escapeHtml(player.name)}">
+                <span class="rank">#${index + 1}</span>
+                <span class="name-full">${escapeHtml(player.name)}</span>
+                <span class="name-short">${escapeHtml(firstName(player.name))}</span>
+                <span class="picked-teams inline" aria-label="Gekozen landen van ${escapeHtml(player.name)}">
+                  ${pickedTeamDots(player.name)}
+                </span>
+              </strong>
             </div>
           </div>
           ${metric("Punten", pointsWithPending(player.current_points, player.current_pending_points))}
@@ -719,8 +741,35 @@ function renderSchedule() {
     dom.scheduleList.innerHTML = `<div class="empty-state">Geen wedstrijden gevonden voor deze fase.</div>`;
     return;
   }
+  const played = matches.filter((match) => match.status === "Gespeeld");
+  const upcoming = matches.filter((match) => match.status !== "Gespeeld");
+  if (!upcoming.length) {
+    dom.scheduleList.innerHTML = scheduleGroup("Gespeelde wedstrijden", played, true);
+    return;
+  }
+  dom.scheduleList.innerHTML = [
+    scheduleGroup("Nog te spelen", upcoming, true),
+    played.length ? scheduleGroup("Gespeelde wedstrijden", played, false) : "",
+  ].join("");
+}
+
+function scheduleGroup(title, matches, open) {
+  return `
+    <details class="schedule-group" ${open ? "open" : ""}>
+      <summary>
+        <span>${escapeHtml(title)}</span>
+        <b>${matches.length}</b>
+      </summary>
+      <div class="schedule-group-body">
+        ${renderMatchRows(matches)}
+      </div>
+    </details>
+  `;
+}
+
+function renderMatchRows(matches) {
   let currentDate = "";
-  dom.scheduleList.innerHTML = matches.map((match) => {
+  return matches.map((match) => {
     const dateLabel = matchDateHeading(match);
     const heading = dateLabel !== currentDate
       ? `<h3 class="schedule-date">${escapeHtml(dateLabel)}</h3>`
@@ -1020,6 +1069,10 @@ function initials(name) {
   const first = parts[0]?.[0] || "";
   const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
   return `${first}.${last}.`.toUpperCase();
+}
+
+function firstName(name) {
+  return String(name || "").trim().split(/\s+/)[0] || name;
 }
 
 function playerColor(name) {

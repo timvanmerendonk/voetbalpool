@@ -218,11 +218,18 @@ h3 {
 
 .dashboard-layout {
   grid-template-columns: minmax(520px, 1.22fr) minmax(360px, 0.78fr);
-  align-items: start;
+  align-items: stretch;
 }
 
-.side-stack {
-  align-items: start;
+.leaderboard-panel,
+.momentum-panel {
+  display: flex;
+  flex-direction: column;
+  height: 650px;
+}
+
+.upcoming-panel {
+  grid-column: 1 / -1;
 }
 
 .panel-heading {
@@ -240,7 +247,8 @@ h3 {
 .leaderboard {
   display: grid;
   gap: 10px;
-  max-height: 560px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-width: thin;
@@ -282,7 +290,10 @@ h3 {
 }
 
 .player-name strong {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -290,8 +301,20 @@ h3 {
 }
 
 .rank {
+  flex: 0 0 auto;
   color: #98a39f;
   font: inherit;
+}
+
+.name-full,
+.name-short {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.name-short {
+  display: none;
 }
 
 .metric {
@@ -311,10 +334,12 @@ h3 {
 }
 
 .picked-teams {
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
+  flex-wrap: nowrap;
   gap: 5px;
-  margin-top: 7px;
+  margin-left: 4px;
+  min-width: max-content;
+  vertical-align: middle;
 }
 
 .picked-team,
@@ -375,7 +400,10 @@ h3 {
 }
 
 .momentum-content {
-  min-height: 320px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .momentum-kicker {
@@ -504,6 +532,7 @@ h3 {
 
 .upcoming-list {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
 }
 
@@ -730,8 +759,65 @@ h3 {
 
 .schedule-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
+}
+
+.schedule-group {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+}
+
+.schedule-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 50px;
+  padding: 13px 15px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 780;
+}
+
+.schedule-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.schedule-group summary::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg);
+  transition: transform 160ms ease;
+}
+
+.schedule-group[open] summary::before {
+  transform: rotate(45deg);
+}
+
+.schedule-group summary span {
+  flex: 1;
+}
+
+.schedule-group summary b {
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 3px 9px;
+  font-size: 0.78rem;
+}
+
+.schedule-group-body {
+  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  background: var(--soft);
+  padding: 12px;
 }
 
 .schedule-date {
@@ -1024,7 +1110,7 @@ h3 {
 }
 
 @media (min-width: 1180px) {
-  .schedule-list {
+  .schedule-group-body {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
@@ -1039,7 +1125,14 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .leaderboard {
+  .leaderboard-panel,
+  .momentum-panel {
+    height: 650px;
+    min-height: 520px;
+  }
+
+  .leaderboard,
+  .momentum-content {
     max-height: 520px;
   }
 }
@@ -1058,7 +1151,7 @@ h3 {
   }
 
   .stat-strip {
-    grid-template-columns: 1fr;
+    display: none;
   }
 
   .leaderboard {
@@ -1073,6 +1166,14 @@ h3 {
 
   .player-info {
     grid-column: 2 / -1;
+  }
+
+  .name-full {
+    display: none;
+  }
+
+  .name-short {
+    display: inline;
   }
 
   .metric {
