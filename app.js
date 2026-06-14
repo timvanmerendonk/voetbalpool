@@ -26,6 +26,17 @@ const PHASES = [
   { key: "Final", label: "Finale" },
 ];
 
+const SCORING_MILESTONES = [
+  "Iedereen 1 wedstrijd gespeeld",
+  "Iedereen 2 wedstrijden gespeeld",
+  "Einde poulefase",
+  "Einde 1/16 finales",
+  "Einde 1/8 finales",
+  "Einde 1/4 finales",
+  "Einde 1/2 finales",
+  "Einde toernooi",
+];
+
 const FLAG_STYLES = {
   "Algerije": "linear-gradient(90deg,#0b8f4d 0 50%,#fff 50%)",
   "Argentinië": "linear-gradient(#74acdf 0 33%,#fff 33% 66%,#74acdf 66%)",
@@ -84,6 +95,8 @@ const state = {
   history: [],
   activePhase: "Group",
   activeTab: "dashboard",
+  activeMomentum: "latest",
+  poolRelevantOnly: false,
   playerColors: new Map(),
   pinnedTooltip: null,
 };
@@ -93,9 +106,8 @@ const dom = {
   tabPanels: document.querySelectorAll(".tab-panel"),
   summaryStats: document.querySelector("#summaryStats"),
   leaderboard: document.querySelector("#leaderboard"),
-  chart: document.querySelector("#pointsChart"),
-  chartEmpty: document.querySelector("#chartEmpty"),
-  chartLegend: document.querySelector("#chartLegend"),
+  momentumTabs: document.querySelector("#momentumTabs"),
+  momentumContent: document.querySelector("#momentumContent"),
   tooltip: document.querySelector("#chartTooltip"),
   hoverCard: null,
   upcomingList: document.querySelector("#upcomingList"),
@@ -103,12 +115,14 @@ const dom = {
   scheduleList: document.querySelector("#scheduleList"),
   lastUpdated: document.querySelector("#lastUpdated"),
   currentPhaseButton: document.querySelector("#currentPhaseButton"),
+  poolRelevantToggle: document.querySelector("#poolRelevantToggle"),
   testerHome: document.querySelector("#testerHome"),
   testerAway: document.querySelector("#testerAway"),
   testerKnockout: document.querySelector("#testerKnockout"),
   testerQualified: document.querySelector("#testerQualified"),
   testerResult: document.querySelector("#testerResult"),
   maxPointsTable: document.querySelector("#maxPointsTable"),
+  rulesMilestones: document.querySelector("#rulesMilestones"),
 };
 
 init();
@@ -132,9 +146,10 @@ async function init() {
     state.activePhase = detectCurrentPhase(schedule);
 
     bindTabs();
+    bindMomentumTabs();
+    bindScheduleControls();
     bindScoreTester();
     render();
-    window.addEventListener("resize", () => drawChart());
     document.addEventListener("pointerdown", closePinnedTooltipsOnOutsidePress);
   } catch (error) {
     showLoadError(error);
@@ -151,11 +166,11 @@ function render() {
   }).format(generatedAt)}`;
   renderSummaryStats();
   renderLeaderboard();
+  renderMomentum();
   renderUpcomingMatches();
   renderPhaseScroller();
   renderSchedule();
   renderRules();
-  drawChart();
 }
 
 function bindTabs() {
@@ -164,8 +179,26 @@ function bindTabs() {
       state.activeTab = tab.dataset.tab || "dashboard";
       dom.topTabs.forEach((entry) => entry.classList.toggle("active", entry === tab));
       dom.tabPanels.forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === state.activeTab));
-      if (state.activeTab === "dashboard") drawChart();
     });
+  });
+}
+
+function bindMomentumTabs() {
+  dom.momentumTabs?.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activeMomentum = button.dataset.momentum || "latest";
+      dom.momentumTabs.querySelectorAll("button").forEach((entry) => {
+        entry.classList.toggle("active", entry === button);
+      });
+      renderMomentum();
+    });
+  });
+}
+
+function bindScheduleControls() {
+  dom.poolRelevantToggle?.addEventListener("change", () => {
+    state.poolRelevantOnly = Boolean(dom.poolRelevantToggle.checked);
+    renderSchedule();
   });
 }
 
@@ -186,9 +219,103 @@ function renderSummaryStats() {
 function statCard(label, value, detail) {
   return `
     <article class="stat-card">
+      <i aria-hidden="true"></i>
       <span>${escapeHtml(label)}</span>
       <strong>${escapeHtml(value)}</strong>
       <p>${escapeHtml(detail)}</p>
+    </article>
+  `;
+}
+
+function renderMomentum() {
+  if (!dom.momentumContent) return;
+  if (state.activeMomentum === "pending") {
+    renderPendingMomentum();
+  } else if (state.activeMomentum === "milestones") {
+    renderMilestoneMomentum();
+  } else {
+    renderLatestMomentum();
+  }
+}
+
+function renderLatestMomentum() {
+  const latestSequence = Math.max(...state.history.map((row) => Number(row.sequence_number || 0)), 0);
+  const latestRows = state.history
+    .filter((row) => Number(row.sequence_number || 0) === latestSequence)
+    .map((row) => ({
+      name: row.player_name,
+      points: Number(row.actual_points || row.points || 0),
+      delta: Number(row.actual_points_delta || row.points_delta || 0),
+      home: row.home_team,
+      away: row.away_team,
+    }))
+    .sort((a, b) => b.delta - a.delta || b.points - a.points || a.name.localeCompare(b.name, "nl"))
+    .slice(0, 8);
+
+  if (!latestRows.length) {
+    dom.momentumContent.innerHTML = `<div class="empty-state compact">Nog geen gespeelde wedstrijden.</div>`;
+    return;
+  }
+
+  const matchLabel = `${latestRows[0].home} - ${latestRows[0].away}`;
+  const maxDelta = Math.max(...latestRows.map((row) => row.delta), 1);
+  dom.momentumContent.innerHTML = `
+    <div class="momentum-kicker">Laatste wedstrijd: ${escapeHtml(matchLabel)}</div>
+    <div class="momentum-bars">
+      ${latestRows.map((row) => momentumBar(row.name, row.delta, `${row.points} totaal`, maxDelta)).join("")}
+    </div>
+  `;
+}
+
+function renderPendingMomentum() {
+  const rows = state.results
+    .map((player) => ({
+      name: player.name,
+      pending: Number(player.current_pending_points || 0),
+      actual: Number(player.actual_current_points || player.current_points || 0),
+    }))
+    .sort((a, b) => b.pending - a.pending || b.actual - a.actual || a.name.localeCompare(b.name, "nl"))
+    .slice(0, 8);
+  const maxPending = Math.max(...rows.map((row) => row.pending), 1);
+  dom.momentumContent.innerHTML = `
+    <div class="momentum-kicker">Verdiend, maar nog niet officieel meegeteld</div>
+    <div class="momentum-bars">
+      ${rows.map((row) => momentumBar(row.name, row.pending, `${row.actual} werkelijk`, maxPending, "pending")).join("")}
+    </div>
+  `;
+}
+
+function renderMilestoneMomentum() {
+  const progress = milestoneProgress();
+  dom.momentumContent.innerHTML = `
+    <div class="milestone-summary">
+      <strong>${escapeHtml(progress.currentLabel)}</strong>
+      <span>${escapeHtml(progress.nextLabel)}</span>
+    </div>
+    <div class="progress-track" aria-label="Mijlpaalvoortgang">
+      <span style="width:${progress.percent}%"></span>
+    </div>
+    <div class="milestone-list">
+      ${SCORING_MILESTONES.map((milestone, index) => `
+        <div class="milestone-step ${index < progress.completedIndex ? "done" : index === progress.completedIndex ? "current" : ""}">
+          <b>${index + 1}</b>
+          <span>${escapeHtml(milestone)}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function momentumBar(name, value, detail, maxValue, mode = "") {
+  const width = Math.max(3, (Number(value || 0) / maxValue) * 100);
+  return `
+    <article class="momentum-row ${mode}">
+      <div>
+        <strong>${escapeHtml(name)}</strong>
+        <span>${escapeHtml(detail)}</span>
+      </div>
+      <div class="bar-wrap"><span style="width:${width}%"></span></div>
+      <b>${value > 0 ? `+${value}` : value}</b>
     </article>
   `;
 }
@@ -209,6 +336,35 @@ function tournamentFinalDate() {
   return finalMatch ? amsterdamMatchDate(finalMatch) : null;
 }
 
+function milestoneProgress() {
+  const current = state.results[0]?.current_milestone_label || "Start toernooi";
+  const currentIndex = SCORING_MILESTONES.indexOf(current);
+  const completedIndex = currentIndex >= 0 ? currentIndex + 1 : 0;
+  const nextLabel = SCORING_MILESTONES[completedIndex]
+    ? `Volgende: ${SCORING_MILESTONES[completedIndex]}`
+    : "Alle mijlpalen zijn bereikt";
+  return {
+    currentLabel: currentIndex >= 0 ? current : "Start toernooi",
+    nextLabel,
+    completedIndex,
+    percent: Math.round((completedIndex / SCORING_MILESTONES.length) * 100),
+  };
+}
+
+function chosenTeamCounts() {
+  const counts = new Map();
+  for (const player of state.players) {
+    for (const team of player.teams || []) {
+      counts.set(team.name, (counts.get(team.name) || 0) + 1);
+    }
+  }
+  return counts;
+}
+
+function chosenTeamSet() {
+  return new Set(chosenTeamCounts().keys());
+}
+
 function finalDateLabel(date) {
   return new Intl.DateTimeFormat("nl-NL", {
     day: "numeric",
@@ -219,6 +375,7 @@ function finalDateLabel(date) {
 }
 
 function renderUpcomingMatches() {
+  const counts = chosenTeamCounts();
   const upcoming = state.schedule
     .filter((match) => match.status !== "Gespeeld")
     .sort(compareMatchesByAmsterdamTime)
@@ -234,12 +391,23 @@ function renderUpcomingMatches() {
         <span>${escapeHtml(matchDateHeading(match))} · ${escapeHtml(matchDateText(match))}</span>
       </div>
       <div class="upcoming-teams">
-        <span>${escapeHtml(scheduleTeamLabel(match.home_team, match))}</span>
+        ${upcomingTeam(match.home_team, match, counts)}
         <b>vs</b>
-        <span>${escapeHtml(scheduleTeamLabel(match.away_team, match))}</span>
+        ${upcomingTeam(match.away_team, match, counts)}
       </div>
     </article>
   `).join("");
+}
+
+function upcomingTeam(team, match, counts) {
+  const picks = counts.get(team) || 0;
+  return `
+    <span class="upcoming-team ${picks ? "picked" : ""}">
+      <i class="${flagClass(team)}" style="${flagStyle(team)}">${flagFallback(team)}</i>
+      <span>${escapeHtml(scheduleTeamLabel(team, match))}</span>
+      ${picks ? `<em>${picks}x</em>` : ""}
+    </span>
+  `;
 }
 
 function bindScoreTester() {
@@ -251,6 +419,7 @@ function bindScoreTester() {
 
 function renderRules() {
   renderScoreTester();
+  renderRulesMilestones();
   renderMaxPointsTable();
 }
 
@@ -296,9 +465,9 @@ function renderMaxPointsTable() {
     ["Doorgaan uit poule", "1 bonuspunt x 5 landen", 5],
     ["1/16 finales", "3 punten x 5 landen", 15],
     ["1/8 finales", "3 punten x 5 landen", 15],
-    ["1/4 finales", "3 punten x 5 landen", 15],
-    ["1/2 finales", "3 punten x 5 landen", 15],
-    ["Finale", "3 punten x 5 landen", 15],
+    ["1/4 finales", "maximaal 4 gekozen landen kunnen winnen", 12],
+    ["1/2 finales", "maximaal 2 gekozen landen kunnen winnen", 6],
+    ["Finale", "maximaal 1 gekozen land kan winnen", 3],
   ];
   const total = rows.reduce((sum, row) => sum + row[2], 0);
   dom.maxPointsTable.innerHTML = `
@@ -314,6 +483,23 @@ function renderMaxPointsTable() {
       <span>Theoretisch maximum</span>
       <b>${total}</b>
     </div>
+  `;
+}
+
+function renderRulesMilestones() {
+  if (!dom.rulesMilestones) return;
+  const progress = milestoneProgress();
+  dom.rulesMilestones.innerHTML = `
+    <div class="rules-milestone-head">
+      <strong>${escapeHtml(progress.currentLabel)}</strong>
+      <span>${escapeHtml(progress.nextLabel)}</span>
+    </div>
+    ${SCORING_MILESTONES.map((milestone, index) => `
+      <div class="rules-milestone ${index < progress.completedIndex ? "done" : index === progress.completedIndex ? "current" : ""}">
+        <b>${index + 1}</b>
+        <span>${escapeHtml(milestone)}</span>
+      </div>
+    `).join("")}
   `;
 }
 
@@ -463,7 +649,7 @@ function bindPickedTeamTooltips() {
     });
     dot.addEventListener("click", (event) => {
       event.stopPropagation();
-      dom.tooltip.hidden = true;
+      if (dom.tooltip) dom.tooltip.hidden = true;
       showPickedTeamTooltip(event, dot);
       state.pinnedTooltip = "team";
     });
@@ -524,8 +710,10 @@ function renderPhaseScroller() {
 }
 
 function renderSchedule() {
+  const selectedTeams = chosenTeamSet();
   const matches = state.schedule
     .filter((match) => match.stage === state.activePhase)
+    .filter((match) => !state.poolRelevantOnly || selectedTeams.has(match.home_team) || selectedTeams.has(match.away_team))
     .sort(compareMatchesByAmsterdamTime);
   if (!matches.length) {
     dom.scheduleList.innerHTML = `<div class="empty-state">Geen wedstrijden gevonden voor deze fase.</div>`;
@@ -806,7 +994,7 @@ function closePinnedTooltipsOnOutsidePress(event) {
   if (isPickedTeam || isTeamTooltip || isChartTarget || isChartTooltip) return;
   state.pinnedTooltip = null;
   if (dom.hoverCard) dom.hoverCard.hidden = true;
-  dom.tooltip.hidden = true;
+  if (dom.tooltip) dom.tooltip.hidden = true;
 }
 
 function detectCurrentPhase(schedule) {
@@ -1020,6 +1208,7 @@ function showLoadError(error) {
   `;
   dom.leaderboard.innerHTML = message;
   dom.scheduleList.innerHTML = message;
-  dom.chartEmpty.hidden = false;
-  dom.chartEmpty.textContent = error.message;
+  if (dom.momentumContent) {
+    dom.momentumContent.innerHTML = `<div class="empty-state compact">${escapeHtml(error.message)}</div>`;
+  }
 }

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>WK Voetbalpool Overzicht</title>
-    <link rel="stylesheet" href="./styles.css?v=20260614220455" />
+    <link rel="stylesheet" href="./styles.css?v=20260614222851" />
   </head>
   <body>
     <main class="app-shell">
@@ -24,19 +24,19 @@
       </header>
 
       <section class="tab-panel active" id="dashboardTab" data-panel="dashboard" aria-labelledby="dashboardTabButton">
-        <div class="stat-grid" id="summaryStats">
+        <div class="stat-strip" id="summaryStats">
           <div class="loading-line"></div>
           <div class="loading-line"></div>
           <div class="loading-line"></div>
           <div class="loading-line"></div>
         </div>
 
-        <div class="dashboard-grid">
+        <div class="dashboard-layout">
           <section class="panel leaderboard-panel" aria-labelledby="leaderboardTitle">
             <div class="panel-heading">
               <div>
                 <h2 id="leaderboardTitle">Stand</h2>
-                <p>Laatste mijlpaalstand.</p>
+                <p>Meetellende punten per mijlpaal, met pending punten tussen haakjes.</p>
               </div>
             </div>
             <div class="leaderboard" id="leaderboard">
@@ -45,41 +45,49 @@
             </div>
           </section>
 
-          <section class="panel chart-panel" aria-labelledby="chartTitle">
-            <div class="panel-heading">
-              <div>
-                <h2 id="chartTitle">Puntenontwikkeling</h2>
-                <p>Werkelijk verdiende punten per wedstrijd.</p>
+          <div class="side-stack">
+            <section class="panel momentum-panel" aria-labelledby="momentumTitle">
+              <div class="panel-heading">
+                <div>
+                  <h2 id="momentumTitle">Momentum</h2>
+                  <p>Rustige blik op veranderingen zonder drukke lijngrafiek.</p>
+                </div>
               </div>
-              <div class="chart-legend" id="chartLegend"></div>
-            </div>
-            <div class="chart-wrap">
-              <svg id="pointsChart" role="img" aria-label="Puntenontwikkeling per speler"></svg>
-              <div class="empty-state" id="chartEmpty" hidden>Nog geen puntenontwikkeling beschikbaar.</div>
-              <div class="chart-tooltip" id="chartTooltip" hidden></div>
-            </div>
-          </section>
+              <div class="segmented-control" id="momentumTabs" aria-label="Momentumweergave">
+                <button class="segment active" type="button" data-momentum="latest">Laatste wedstrijd</button>
+                <button class="segment" type="button" data-momentum="pending">Pending</button>
+                <button class="segment" type="button" data-momentum="milestones">Mijlpalen</button>
+              </div>
+              <div class="momentum-content" id="momentumContent"></div>
+            </section>
 
-          <section class="panel upcoming-panel" aria-labelledby="upcomingTitle">
-            <div class="panel-heading">
-              <div>
-                <h2 id="upcomingTitle">Komende wedstrijden</h2>
-                <p>Volgende 5 op het programma.</p>
+            <section class="panel upcoming-panel" aria-labelledby="upcomingTitle">
+              <div class="panel-heading">
+                <div>
+                  <h2 id="upcomingTitle">Komende wedstrijden</h2>
+                  <p>Volgende 5 duels met gekozen landen gemarkeerd.</p>
+                </div>
               </div>
-            </div>
-            <div class="upcoming-list" id="upcomingList"></div>
-          </section>
+              <div class="upcoming-list" id="upcomingList"></div>
+            </section>
+          </div>
         </div>
       </section>
 
       <section class="tab-panel" id="scheduleTab" data-panel="schedule" aria-labelledby="scheduleTabButton">
         <section class="panel schedule-panel" aria-labelledby="scheduleTitle">
-          <div class="panel-heading">
+          <div class="panel-heading schedule-heading">
             <div>
               <h2 id="scheduleTitle">Speelschema</h2>
               <p>Filter op fase en bekijk status, score en doorgangers.</p>
             </div>
-            <button class="ghost-button" id="currentPhaseButton" type="button">Actuele fase</button>
+            <div class="schedule-actions">
+              <label class="switch-row">
+                <input id="poolRelevantToggle" type="checkbox" />
+                Alleen poolrelevant
+              </label>
+              <button class="ghost-button" id="currentPhaseButton" type="button">Actuele fase</button>
+            </div>
           </div>
           <nav class="phase-scroller" id="phaseScroller" aria-label="Fases"></nav>
           <div class="schedule-list" id="scheduleList"></div>
@@ -87,7 +95,7 @@
       </section>
 
       <section class="tab-panel" id="rulesTab" data-panel="rules" aria-labelledby="rulesTabButton">
-        <div class="rules-grid">
+        <div class="rules-layout">
           <section class="panel rules-panel" aria-labelledby="rulesTitle">
             <div class="panel-heading">
               <div>
@@ -159,11 +167,21 @@
             </div>
           </section>
 
+          <section class="panel milestone-rules-panel" aria-labelledby="milestoneRulesTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="milestoneRulesTitle">Mijlpalen</h2>
+                <p>Wanneer pending punten officieel meetellen.</p>
+              </div>
+            </div>
+            <div class="rules-milestones" id="rulesMilestones"></div>
+          </section>
+
           <section class="panel max-points-panel" aria-labelledby="maxPointsTitle">
             <div class="panel-heading">
               <div>
                 <h2 id="maxPointsTitle">Maximum aantal punten</h2>
-                <p>Theoretisch maximum per speler.</p>
+                <p>Theoretisch maximum per speler, met bracketlimiet vanaf de kwartfinale.</p>
               </div>
             </div>
             <div class="max-table" id="maxPointsTable"></div>
@@ -172,7 +190,7 @@
       </section>
     </main>
 
-    <script src="./dashboard_data.js?v=20260614220455"></script>
-    <script src="./app.js?v=20260614220455"></script>
+    <script src="./dashboard_data.js?v=20260614222851"></script>
+    <script src="./app.js?v=20260614222851"></script>
   </body>
 </html>
