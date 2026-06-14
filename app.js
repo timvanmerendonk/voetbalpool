@@ -241,7 +241,7 @@ function renderMomentum() {
 function renderLatestMomentum() {
   const comparison = latestMilestoneComparison();
   if (!comparison.rows.length) {
-    dom.momentumContent.innerHTML = `<div class="empty-state compact">Nog geen mijlpaalgegevens beschikbaar.</div>`;
+    dom.momentumContent.innerHTML = `<div class="empty-state compact">Nog geen mijlpaal bereikt.</div>`;
     return;
   }
 
@@ -258,6 +258,9 @@ function latestMilestoneComparison() {
   const milestoneLabels = [...new Set(state.history.map((row) => row.milestone_label || "Start toernooi"))];
   const latestLabel = milestoneLabels.at(-1) || "Start toernooi";
   const previousLabel = milestoneLabels.length > 1 ? milestoneLabels.at(-2) : null;
+  if (!previousLabel && latestLabel === "Start toernooi") {
+    return { label: "Nog geen mijlpaal bereikt", rows: [] };
+  }
   const latestRows = lastRowsForMilestone(latestLabel);
   const previousRows = previousLabel ? lastRowsForMilestone(previousLabel) : [];
   const previousPoints = new Map(previousRows.map((row) => [row.player_name, Number(row.actual_points || row.points || 0)]));
