@@ -329,17 +329,16 @@ h3 {
 
 .pending-points {
   color: #7a8581;
+  cursor: help;
   font-size: 0.78em;
   font-weight: 800;
 }
 
 .picked-teams {
-  display: inline-flex;
-  flex-wrap: nowrap;
+  display: flex;
+  flex-wrap: wrap;
   gap: 5px;
-  margin-left: 4px;
-  min-width: max-content;
-  vertical-align: middle;
+  margin-top: 7px;
 }
 
 .picked-team,
@@ -557,7 +556,7 @@ h3 {
 
 .upcoming-team {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -813,7 +812,7 @@ h3 {
 
 .schedule-group-body {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr));
   gap: 10px;
   border-top: 1px solid var(--line);
   background: var(--soft);
@@ -864,6 +863,10 @@ h3 {
   min-width: 0;
   gap: 6px;
   text-align: center;
+}
+
+.team.slot-team {
+  gap: 5px;
 }
 
 .team-avatar {
@@ -923,6 +926,24 @@ h3 {
   white-space: nowrap;
   font-weight: 680;
   font-size: 0.86rem;
+}
+
+.team.slot-team .team-name {
+  display: grid;
+  gap: 1px;
+  overflow: visible;
+  white-space: normal;
+}
+
+.team-name-main {
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.team-name-sub {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.1;
 }
 
 .score {
@@ -1111,7 +1132,7 @@ h3 {
 
 @media (min-width: 1180px) {
   .schedule-group-body {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

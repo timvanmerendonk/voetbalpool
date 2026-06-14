@@ -423,7 +423,6 @@ function upcomingTeam(team, match, counts) {
     <span class="upcoming-team ${picks ? "picked" : ""}">
       <i class="${flagClass(team)}" style="${flagStyle(team)}">${flagFallback(team)}</i>
       <span>${escapeHtml(scheduleTeamLabel(team, match))}</span>
-      ${picks ? `<em>${picks}x</em>` : ""}
     </span>
   `;
 }
@@ -607,10 +606,10 @@ function renderLeaderboard() {
                 <span class="rank">#${index + 1}</span>
                 <span class="name-full">${escapeHtml(player.name)}</span>
                 <span class="name-short">${escapeHtml(firstName(player.name))}</span>
-                <span class="picked-teams inline" aria-label="Gekozen landen van ${escapeHtml(player.name)}">
-                  ${pickedTeamDots(player.name)}
-                </span>
               </strong>
+            </div>
+            <div class="picked-teams" aria-label="Gekozen landen van ${escapeHtml(player.name)}">
+              ${pickedTeamDots(player.name)}
             </div>
           </div>
           ${metric("Punten", pointsWithPending(player.current_points, player.current_pending_points))}
@@ -630,7 +629,8 @@ function metric(label, value) {
 function pointsWithPending(points, pending) {
   const pendingPoints = Number(pending || 0);
   if (pendingPoints <= 0) return points;
-  return `${points} <small class="pending-points">(+${pendingPoints})</small>`;
+  const label = `${pendingPoints} ${pendingPoints === 1 ? "punt is" : "punten zijn"} al verdiend, maar tellen pas mee vanaf de volgende mijlpaal.`;
+  return `${points} <small class="pending-points" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">(+${pendingPoints})</small>`;
 }
 
 function pickedTeamDots(playerName) {
@@ -866,15 +866,21 @@ function formatAmsterdamTime(date) {
 
 function teamBlock(team, away = false, qualifiedTeam = "", match = {}) {
   const label = scheduleTeamLabel(team, match);
+  const fullLabel = displayTeamName(team);
   const avatar = isBracketSlot(team) ? slotAvatar(team) : flagFallback(team);
   const qualified = qualifiedTeam && team === qualifiedTeam;
+  const slotParts = isBracketSlot(team) ? compactSlotLabel(team) : null;
   return `
-    <div class="team ${away ? "away" : ""} ${qualified ? "qualified" : ""}">
+    <div class="team ${away ? "away" : ""} ${qualified ? "qualified" : ""} ${slotParts ? "slot-team" : ""}" title="${escapeHtml(fullLabel)}">
       <span class="team-avatar-wrap">
         <span class="team-avatar ${isBracketSlot(team) ? "slot" : flagClass(team)}" style="${flagStyle(team)}">${avatar}</span>
         ${qualified ? `<span class="team-medal" aria-label="Door naar de volgende ronde" title="Door naar de volgende ronde">🏅</span>` : ""}
       </span>
-      <span class="team-name">${escapeHtml(label)}</span>
+      <span class="team-name">
+        ${slotParts
+          ? `<span class="team-name-main">${escapeHtml(slotParts.main)}</span><span class="team-name-sub">${escapeHtml(slotParts.sub)}</span>`
+          : escapeHtml(label)}
+      </span>
     </div>
   `;
 }
@@ -885,6 +891,24 @@ function scheduleTeamLabel(team, match) {
     return `${label} (${match.group})`;
   }
   return label;
+}
+
+function compactSlotLabel(value) {
+  const groupRank = String(value).match(/^([12])([A-L])$/);
+  if (groupRank) {
+    return { main: `${groupRank[1]}e`, sub: `groep ${groupRank[2]}` };
+  }
+  if (/^3[A-L](\/[A-L])+$/.test(value)) {
+    return { main: "Beste 3e", sub: `groep ${value.slice(1)}` };
+  }
+  const matchSlot = String(value).match(/^([WL])(\d+)$/);
+  if (matchSlot) {
+    return {
+      main: matchSlot[1] === "W" ? "Winnaar" : "Verliezer",
+      sub: `wedstrijd ${matchSlot[2]}`,
+    };
+  }
+  return { main: displayTeamName(value), sub: "" };
 }
 
 function drawChart() {
