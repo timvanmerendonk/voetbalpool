@@ -3,63 +3,176 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>WK Poule Overzicht</title>
-    <link rel="stylesheet" href="./styles.css?v=20260607211338" />
+    <title>WK Voetbalpool Overzicht</title>
+    <link rel="stylesheet" href="./styles.css?v=20260614220455" />
   </head>
   <body>
     <main class="app-shell">
-      <header class="page-header">
-        <div>
-          <p class="eyebrow">WK 2026 Poule</p>
-          <h1>Poule-overzicht</h1>
+      <header class="site-header">
+        <div class="header-main">
+          <div>
+            <p class="eyebrow">WK 2026 Voetbalpool</p>
+            <h1>Voetbalpool-overzicht</h1>
+          </div>
+          <div class="status-pill" id="lastUpdated">Data laden...</div>
         </div>
-        <div class="status-pill" id="lastUpdated">Data laden...</div>
+        <nav class="top-tabs" aria-label="Hoofdnavigatie">
+          <button class="top-tab active" id="dashboardTabButton" type="button" data-tab="dashboard">Dashboard</button>
+          <button class="top-tab" id="scheduleTabButton" type="button" data-tab="schedule">Speelschema</button>
+          <button class="top-tab" id="rulesTabButton" type="button" data-tab="rules">Spelregels</button>
+        </nav>
       </header>
 
-      <div class="overview-grid">
-        <section class="panel leaderboard-panel" aria-labelledby="leaderboardTitle">
-          <div class="panel-heading">
-            <div>
-              <h2 id="leaderboardTitle">Stand</h2>
-              <p>Gesorteerd op punten, doelsaldo en winkans.</p>
-            </div>
-          </div>
-          <div class="leaderboard" id="leaderboard">
-            <div class="loading-line"></div>
-            <div class="loading-line short"></div>
-          </div>
-        </section>
-
-        <section class="panel chart-panel" aria-labelledby="chartTitle">
-          <div class="panel-heading">
-            <div>
-              <h2 id="chartTitle">Puntenontwikkeling</h2>
-              <p>Top 5 uit de huidige stand.</p>
-            </div>
-            <div class="chart-legend" id="chartLegend"></div>
-          </div>
-          <div class="chart-wrap">
-            <svg id="pointsChart" role="img" aria-label="Puntenontwikkeling per speler"></svg>
-            <div class="empty-state" id="chartEmpty" hidden>Nog geen puntenontwikkeling beschikbaar.</div>
-            <div class="chart-tooltip" id="chartTooltip" hidden></div>
-          </div>
-        </section>
-      </div>
-
-      <section class="panel schedule-panel" aria-labelledby="scheduleTitle">
-        <div class="panel-heading">
-          <div>
-            <h2 id="scheduleTitle">Speelschema</h2>
-            <p>Filter op fase en bekijk status, score en doorgangers.</p>
-          </div>
-          <button class="ghost-button" id="currentPhaseButton" type="button">Actuele fase</button>
+      <section class="tab-panel active" id="dashboardTab" data-panel="dashboard" aria-labelledby="dashboardTabButton">
+        <div class="stat-grid" id="summaryStats">
+          <div class="loading-line"></div>
+          <div class="loading-line"></div>
+          <div class="loading-line"></div>
+          <div class="loading-line"></div>
         </div>
-        <nav class="phase-scroller" id="phaseScroller" aria-label="Fases"></nav>
-        <div class="schedule-list" id="scheduleList"></div>
+
+        <div class="dashboard-grid">
+          <section class="panel leaderboard-panel" aria-labelledby="leaderboardTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="leaderboardTitle">Stand</h2>
+                <p>Laatste mijlpaalstand.</p>
+              </div>
+            </div>
+            <div class="leaderboard" id="leaderboard">
+              <div class="loading-line"></div>
+              <div class="loading-line short"></div>
+            </div>
+          </section>
+
+          <section class="panel chart-panel" aria-labelledby="chartTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="chartTitle">Puntenontwikkeling</h2>
+                <p>Werkelijk verdiende punten per wedstrijd.</p>
+              </div>
+              <div class="chart-legend" id="chartLegend"></div>
+            </div>
+            <div class="chart-wrap">
+              <svg id="pointsChart" role="img" aria-label="Puntenontwikkeling per speler"></svg>
+              <div class="empty-state" id="chartEmpty" hidden>Nog geen puntenontwikkeling beschikbaar.</div>
+              <div class="chart-tooltip" id="chartTooltip" hidden></div>
+            </div>
+          </section>
+
+          <section class="panel upcoming-panel" aria-labelledby="upcomingTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="upcomingTitle">Komende wedstrijden</h2>
+                <p>Volgende 5 op het programma.</p>
+              </div>
+            </div>
+            <div class="upcoming-list" id="upcomingList"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="scheduleTab" data-panel="schedule" aria-labelledby="scheduleTabButton">
+        <section class="panel schedule-panel" aria-labelledby="scheduleTitle">
+          <div class="panel-heading">
+            <div>
+              <h2 id="scheduleTitle">Speelschema</h2>
+              <p>Filter op fase en bekijk status, score en doorgangers.</p>
+            </div>
+            <button class="ghost-button" id="currentPhaseButton" type="button">Actuele fase</button>
+          </div>
+          <nav class="phase-scroller" id="phaseScroller" aria-label="Fases"></nav>
+          <div class="schedule-list" id="scheduleList"></div>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="rulesTab" data-panel="rules" aria-labelledby="rulesTabButton">
+        <div class="rules-grid">
+          <section class="panel rules-panel" aria-labelledby="rulesTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="rulesTitle">Spelregels</h2>
+                <p>Punten stapelen per gekozen land.</p>
+              </div>
+            </div>
+            <div class="rule-list">
+              <article class="rule-item">
+                <strong>3</strong>
+                <div>
+                  <h3>Winst in 90 minuten</h3>
+                  <p>Een gekozen land krijgt 3 punten voor een overwinning.</p>
+                </div>
+              </article>
+              <article class="rule-item">
+                <strong>1</strong>
+                <div>
+                  <h3>Gelijkspel</h3>
+                  <p>Beide gekozen landen krijgen 1 punt bij een gelijke stand na 90 minuten.</p>
+                </div>
+              </article>
+              <article class="rule-item">
+                <strong>+1</strong>
+                <div>
+                  <h3>Door naar knock-outfase</h3>
+                  <p>Een land krijgt 1 bonuspunt zodra het de poulefase overleeft.</p>
+                </div>
+              </article>
+              <article class="rule-item">
+                <strong>+1</strong>
+                <div>
+                  <h3>Door na knock-outgelijkspel</h3>
+                  <p>Bij een gelijkspel in 90 minuten krijgt de doorganger 1 extra punt.</p>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel score-tester-panel" aria-labelledby="scoreTesterTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="scoreTesterTitle">Probeer een score</h2>
+                <p>Test de punten voor één wedstrijd.</p>
+              </div>
+            </div>
+            <div class="score-tester">
+              <label>
+                Team A
+                <input id="testerHome" type="number" min="0" max="20" value="2" />
+              </label>
+              <span class="score-separator">-</span>
+              <label>
+                Team B
+                <input id="testerAway" type="number" min="0" max="20" value="1" />
+              </label>
+              <label class="toggle-row">
+                <input id="testerKnockout" type="checkbox" />
+                Knock-outwedstrijd
+              </label>
+              <label class="qualified-row">
+                Doorganger bij gelijkspel
+                <select id="testerQualified">
+                  <option value="home">Team A</option>
+                  <option value="away">Team B</option>
+                </select>
+              </label>
+              <div class="tester-result" id="testerResult"></div>
+            </div>
+          </section>
+
+          <section class="panel max-points-panel" aria-labelledby="maxPointsTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="maxPointsTitle">Maximum aantal punten</h2>
+                <p>Theoretisch maximum per speler.</p>
+              </div>
+            </div>
+            <div class="max-table" id="maxPointsTable"></div>
+          </section>
+        </div>
       </section>
     </main>
 
-    <script src="./dashboard_data.js?v=20260607211338"></script>
-    <script src="./app.js?v=20260607211338"></script>
+    <script src="./dashboard_data.js?v=20260614220455"></script>
+    <script src="./app.js?v=20260614220455"></script>
   </body>
 </html>

@@ -83,21 +83,32 @@ const state = {
   schedule: [],
   history: [],
   activePhase: "Group",
+  activeTab: "dashboard",
   playerColors: new Map(),
   pinnedTooltip: null,
 };
 
 const dom = {
+  topTabs: document.querySelectorAll(".top-tab"),
+  tabPanels: document.querySelectorAll(".tab-panel"),
+  summaryStats: document.querySelector("#summaryStats"),
   leaderboard: document.querySelector("#leaderboard"),
   chart: document.querySelector("#pointsChart"),
   chartEmpty: document.querySelector("#chartEmpty"),
   chartLegend: document.querySelector("#chartLegend"),
   tooltip: document.querySelector("#chartTooltip"),
   hoverCard: null,
+  upcomingList: document.querySelector("#upcomingList"),
   phaseScroller: document.querySelector("#phaseScroller"),
   scheduleList: document.querySelector("#scheduleList"),
   lastUpdated: document.querySelector("#lastUpdated"),
   currentPhaseButton: document.querySelector("#currentPhaseButton"),
+  testerHome: document.querySelector("#testerHome"),
+  testerAway: document.querySelector("#testerAway"),
+  testerKnockout: document.querySelector("#testerKnockout"),
+  testerQualified: document.querySelector("#testerQualified"),
+  testerResult: document.querySelector("#testerResult"),
+  maxPointsTable: document.querySelector("#maxPointsTable"),
 };
 
 init();
@@ -120,6 +131,8 @@ async function init() {
     state.history = history;
     state.activePhase = detectCurrentPhase(schedule);
 
+    bindTabs();
+    bindScoreTester();
     render();
     window.addEventListener("resize", () => drawChart());
     document.addEventListener("pointerdown", closePinnedTooltipsOnOutsidePress);
@@ -136,10 +149,172 @@ function render() {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(generatedAt)}`;
+  renderSummaryStats();
   renderLeaderboard();
+  renderUpcomingMatches();
   renderPhaseScroller();
   renderSchedule();
+  renderRules();
   drawChart();
+}
+
+function bindTabs() {
+  dom.topTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      state.activeTab = tab.dataset.tab || "dashboard";
+      dom.topTabs.forEach((entry) => entry.classList.toggle("active", entry === tab));
+      dom.tabPanels.forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === state.activeTab));
+      if (state.activeTab === "dashboard") drawChart();
+    });
+  });
+}
+
+function renderSummaryStats() {
+  const participantCount = state.players.length || state.results.length;
+  const mostPicked = mostPickedTeam();
+  const finalDate = tournamentFinalDate();
+  const daysToFinal = finalDate ? Math.max(0, Math.ceil((finalDate.getTime() - Date.now()) / 86400000)) : "-";
+  const scoringText = "Landen scoren met winst, gelijkspel en bonussen voor doorgaan.";
+  dom.summaryStats.innerHTML = [
+    statCard("Deelnemers", participantCount, "spelers doen mee"),
+    statCard("Meest gekozen team", mostPicked?.team || "-", mostPicked ? `${mostPicked.count} keer gekozen` : "geen keuzes"),
+    statCard("Scoring", "3 / 1 / +1", scoringText),
+    statCard("Dagen tot WK-finale", daysToFinal, finalDate ? matchDateHeading({ match_date: finalDateLabel(finalDate), match_time: "00:00", utc_offset: "UTC+0" }) : "nog niet ingepland"),
+  ].join("");
+}
+
+function statCard(label, value, detail) {
+  return `
+    <article class="stat-card">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <p>${escapeHtml(detail)}</p>
+    </article>
+  `;
+}
+
+function mostPickedTeam() {
+  const counts = new Map();
+  for (const player of state.players) {
+    for (const team of player.teams || []) {
+      counts.set(team.name, (counts.get(team.name) || 0) + 1);
+    }
+  }
+  const [team, count] = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "nl"))[0] || [];
+  return team ? { team, count } : null;
+}
+
+function tournamentFinalDate() {
+  const finalMatch = state.schedule.find((match) => match.stage === "Final");
+  return finalMatch ? amsterdamMatchDate(finalMatch) : null;
+}
+
+function finalDateLabel(date) {
+  return new Intl.DateTimeFormat("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Amsterdam",
+  }).format(date);
+}
+
+function renderUpcomingMatches() {
+  const upcoming = state.schedule
+    .filter((match) => match.status !== "Gespeeld")
+    .sort(compareMatchesByAmsterdamTime)
+    .slice(0, 5);
+  if (!upcoming.length) {
+    dom.upcomingList.innerHTML = `<div class="empty-state">Geen komende wedstrijden gevonden.</div>`;
+    return;
+  }
+  dom.upcomingList.innerHTML = upcoming.map((match) => `
+    <article class="upcoming-row">
+      <div class="upcoming-date">
+        <strong>${escapeHtml(match.stage_label || phaseLabel(match.stage))}</strong>
+        <span>${escapeHtml(matchDateHeading(match))} · ${escapeHtml(matchDateText(match))}</span>
+      </div>
+      <div class="upcoming-teams">
+        <span>${escapeHtml(scheduleTeamLabel(match.home_team, match))}</span>
+        <b>vs</b>
+        <span>${escapeHtml(scheduleTeamLabel(match.away_team, match))}</span>
+      </div>
+    </article>
+  `).join("");
+}
+
+function bindScoreTester() {
+  [dom.testerHome, dom.testerAway, dom.testerKnockout, dom.testerQualified].forEach((input) => {
+    input?.addEventListener("input", renderScoreTester);
+    input?.addEventListener("change", renderScoreTester);
+  });
+}
+
+function renderRules() {
+  renderScoreTester();
+  renderMaxPointsTable();
+}
+
+function renderScoreTester() {
+  if (!dom.testerResult) return;
+  const homeGoals = clampScore(dom.testerHome?.value);
+  const awayGoals = clampScore(dom.testerAway?.value);
+  const knockout = Boolean(dom.testerKnockout?.checked);
+  const draw = homeGoals === awayGoals;
+  if (dom.testerQualified) dom.testerQualified.disabled = !knockout || !draw;
+
+  let homePoints = 0;
+  let awayPoints = 0;
+  if (homeGoals > awayGoals) {
+    homePoints = 3;
+  } else if (awayGoals > homeGoals) {
+    awayPoints = 3;
+  } else {
+    homePoints = 1;
+    awayPoints = 1;
+    if (knockout) {
+      if (dom.testerQualified?.value === "away") awayPoints += 1;
+      else homePoints += 1;
+    }
+  }
+
+  dom.testerResult.innerHTML = `
+    <div><span>Team A</span><strong>${homePoints} ${homePoints === 1 ? "punt" : "punten"}</strong></div>
+    <div><span>Team B</span><strong>${awayPoints} ${awayPoints === 1 ? "punt" : "punten"}</strong></div>
+  `;
+}
+
+function clampScore(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.min(20, Math.trunc(parsed)));
+}
+
+function renderMaxPointsTable() {
+  if (!dom.maxPointsTable) return;
+  const rows = [
+    ["Poulefase", "3 wedstrijden x 3 punten x 5 landen", 45],
+    ["Doorgaan uit poule", "1 bonuspunt x 5 landen", 5],
+    ["1/16 finales", "3 punten x 5 landen", 15],
+    ["1/8 finales", "3 punten x 5 landen", 15],
+    ["1/4 finales", "3 punten x 5 landen", 15],
+    ["1/2 finales", "3 punten x 5 landen", 15],
+    ["Finale", "3 punten x 5 landen", 15],
+  ];
+  const total = rows.reduce((sum, row) => sum + row[2], 0);
+  dom.maxPointsTable.innerHTML = `
+    ${rows.map(([phase, formula, points]) => `
+      <div class="max-row">
+        <strong>${phase}</strong>
+        <span>${formula}</span>
+        <b>${points}</b>
+      </div>
+    `).join("")}
+    <div class="max-row total">
+      <strong>Totaal</strong>
+      <span>Theoretisch maximum</span>
+      <b>${total}</b>
+    </div>
+  `;
 }
 
 async function loadCsv(path) {
@@ -191,6 +366,8 @@ function normaliseResults(rows) {
     .map((row) => ({
       ...row,
       current_points: Number(row.current_points || 0),
+      actual_current_points: Number(row.actual_current_points || row.current_points || 0),
+      current_pending_points: Number(row.current_pending_points || 0),
       current_goal_difference: Number(row.current_goal_difference || 0),
       current_goals_scored: Number(row.current_goals_scored || 0),
       win_probability: Number(row.win_probability || 0),
@@ -228,7 +405,7 @@ function renderLeaderboard() {
               ${pickedTeamDots(player.name)}
             </div>
           </div>
-          ${metric("Punten", player.current_points)}
+          ${metric("Punten", pointsWithPending(player.current_points, player.current_pending_points))}
           ${metric("Doelsaldo", signed(player.current_goal_difference))}
           ${metric("Winkans", formatPercent(player.win_probability))}
         </article>
@@ -240,6 +417,12 @@ function renderLeaderboard() {
 
 function metric(label, value) {
   return `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`;
+}
+
+function pointsWithPending(points, pending) {
+  const pendingPoints = Number(pending || 0);
+  if (pendingPoints <= 0) return points;
+  return `${points} <small class="pending-points">(+${pendingPoints})</small>`;
 }
 
 function pickedTeamDots(playerName) {
@@ -470,14 +653,21 @@ function scheduleTeamLabel(team, match) {
 function drawChart() {
   const orderedChartNames = state.results.slice(0, 5).map((player) => player.name);
   const allowed = new Set(orderedChartNames);
-  const rows = state.history
+  const allRows = state.history
     .filter((row) => allowed.has(row.player_name))
     .map((row) => ({
       ...row,
       sequence_number: Number(row.sequence_number || 0),
       points: Number(row.points || 0),
       points_delta: Number(row.points_delta || 0),
+      actual_points: Number(row.actual_points || row.points || 0),
+      actual_points_delta: Number(row.actual_points_delta || row.points_delta || 0),
+      pending_points: Number(row.pending_points || 0),
+      chart_points: Number(row.actual_points || row.points || 0),
     }));
+  const latestSequence = Math.max(...allRows.map((row) => row.sequence_number), 0);
+  const minSequence = Math.max(1, latestSequence - 9);
+  const rows = allRows.filter((row) => row.sequence_number >= minSequence);
 
   dom.chartLegend.innerHTML = "";
 
@@ -492,13 +682,15 @@ function drawChart() {
   const width = Math.max(320, dom.chart.clientWidth || 800);
   const height = Math.max(300, dom.chart.parentElement?.clientHeight || 360);
   const pad = { top: 16, right: 86, bottom: 42, left: 34 };
+  const minX = Math.min(...rows.map((row) => row.sequence_number));
   const maxX = Math.max(...rows.map((row) => row.sequence_number), 1);
-  const maxY = Math.max(...rows.map((row) => row.points), 1);
-  const x = (value) => pad.left + (value / maxX) * (width - pad.left - pad.right);
+  const xSpan = Math.max(1, maxX - minX);
+  const maxY = Math.max(...rows.map((row) => row.chart_points), 1);
+  const x = (value) => pad.left + ((value - minX) / xSpan) * (width - pad.left - pad.right);
   const y = (value) => height - pad.bottom - (value / maxY) * (height - pad.top - pad.bottom);
   const byPlayer = groupBy(rows, "player_name");
   const grid = [0, Math.ceil(maxY / 2), maxY];
-  const xTicks = makeXTicks(maxX);
+  const xTicks = makeXTicks(minX, maxX);
 
   const playerSeries = orderedChartNames
     .map((name) => {
@@ -511,24 +703,35 @@ function drawChart() {
   const pointOffsets = overlappingPointOffsets(playerSeries);
 
   const lines = playerSeries.map(([name, values]) => {
-    const points = values.map((row) => `${x(row.sequence_number)},${y(row.points) + pointOffset(pointOffsets, name, row)}`).join(" ");
+    const path = smoothLinePath(values.map((row) => ({
+      x: x(row.sequence_number),
+      y: y(row.chart_points) + pointOffset(pointOffsets, name, row),
+    })));
     const last = values[values.length - 1];
+    const lastPending = Number(last?.pending_points || 0);
     const circles = values.map((row) => `
-      <circle cx="${x(row.sequence_number)}" cy="${y(row.points) + pointOffset(pointOffsets, name, row)}" r="4" fill="${playerColor(name)}"
-        data-name="${escapeHtml(name)}" data-points="${row.points}" data-sequence="${row.sequence_number}"
+      <circle cx="${x(row.sequence_number)}" cy="${y(row.chart_points) + pointOffset(pointOffsets, name, row)}" r="4" fill="${playerColor(name)}"
+        data-name="${escapeHtml(name)}" data-points="${row.chart_points}" data-counted-points="${row.points}" data-sequence="${row.sequence_number}"
         data-home="${escapeHtml(row.home_team || "")}" data-away="${escapeHtml(row.away_team || "")}"
-        data-delta="${row.points_delta}" />
+        data-delta="${row.actual_points_delta}" data-counted-delta="${row.points_delta}" data-actual-points="${row.actual_points}"
+        data-actual-delta="${row.actual_points_delta}" data-pending="${row.pending_points}"
+        data-milestone="${escapeHtml(row.milestone_label || "")}" />
     `).join("");
     const markerX = last ? x(last.sequence_number) + 22 + (endpointOffsets.get(name) || 0) : 0;
     const endMarker = last ? `
-      <g class="chart-end-marker" transform="translate(${markerX}, ${y(last.points) + pointOffset(pointOffsets, name, last)})"
-        data-name="${escapeHtml(name)}" data-points="${last.points}" data-sequence="${last.sequence_number}">
+      <g class="chart-end-marker" transform="translate(${markerX}, ${y(last.chart_points) + pointOffset(pointOffsets, name, last)})"
+        data-name="${escapeHtml(name)}" data-points="${last.chart_points}" data-counted-points="${last.points}" data-sequence="${last.sequence_number}"
+        data-actual-points="${last.actual_points}" data-pending="${last.pending_points}"
+        data-milestone="${escapeHtml(last.milestone_label || "")}">
         <circle r="13" fill="${playerColor(name)}" stroke="#fff" stroke-width="3"
-          data-name="${escapeHtml(name)}" data-points="${last.points}" data-sequence="${last.sequence_number}"></circle>
+          data-name="${escapeHtml(name)}" data-points="${last.chart_points}" data-counted-points="${last.points}" data-sequence="${last.sequence_number}"
+          data-actual-points="${last.actual_points}" data-pending="${last.pending_points}"
+          data-milestone="${escapeHtml(last.milestone_label || "")}"></circle>
         <text y="4" text-anchor="middle" fill="#fff" font-size="8" font-weight="800" pointer-events="none">${escapeHtml(compactInitials(name))}</text>
+        ${lastPending > 0 ? `<text x="17" y="-10" fill="#7a8581" font-size="11" font-weight="800" pointer-events="none">(+${lastPending})</text>` : ""}
       </g>
     ` : "";
-    return `<polyline points="${points}" fill="none" stroke="${playerColor(name)}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />${circles}${endMarker}`;
+    return `<path d="${path}" fill="none" stroke="${playerColor(name)}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />${circles}${endMarker}`;
   }).join("");
 
   dom.chart.setAttribute("viewBox", `0 0 ${width} ${height}`);
@@ -542,7 +745,7 @@ function drawChart() {
       <line x1="${x(tick)}" x2="${x(tick)}" y1="${height - pad.bottom}" y2="${height - pad.bottom + 5}" stroke="#aebbb5" />
       <text x="${x(tick)}" y="${height - 24}" text-anchor="middle" fill="#66706d" font-size="11">${tick}</text>
     `).join("")}
-    <text x="${width / 2}" y="${height - 7}" text-anchor="middle" fill="#66706d" font-size="12">Aantal wedstrijden gespeeld</text>
+    <text x="${width / 2}" y="${height - 7}" text-anchor="middle" fill="#66706d" font-size="12">Laatste 10 gespeelde wedstrijden</text>
     ${lines}
   `;
 
@@ -570,19 +773,24 @@ function showTooltip(event, target) {
   dom.tooltip.hidden = false;
   const hasMatch = target.dataset.home || target.dataset.away;
   const delta = Number(target.dataset.delta || 0);
+  const countedPoints = Number(target.dataset.countedPoints || target.dataset.points || 0);
+  const countedDelta = Number(target.dataset.countedDelta || 0);
+  const pending = Number(target.dataset.pending || 0);
   dom.tooltip.innerHTML = hasMatch
     ? `
       <div class="chart-tooltip-title">${escapeHtml(target.dataset.name)}</div>
-      <div class="chart-tooltip-score">${target.dataset.points} punten</div>
+      <div class="chart-tooltip-score">${target.dataset.points} punten verdiend</div>
       <div class="chart-tooltip-detail">
         <span>Wedstrijd ${target.dataset.sequence}</span>
         <strong>${escapeHtml(target.dataset.home)} - ${escapeHtml(target.dataset.away)}</strong>
-        <span>levert ${delta} ${delta === 1 ? "punt" : "punten"} op</span>
+        <span>${chartDeltaText(delta, countedDelta, pending)}</span>
+        <span>${countedPoints} punten tellen mee in de stand</span>
+        ${target.dataset.milestone ? `<span>${escapeHtml(target.dataset.milestone)}</span>` : ""}
       </div>
     `
     : `
       <div class="chart-tooltip-title">${escapeHtml(target.dataset.name)}</div>
-      <div class="chart-tooltip-score">${target.dataset.points} punten</div>
+      <div class="chart-tooltip-score">${target.dataset.points} punten verdiend</div>
     `;
   const wrap = dom.chart.getBoundingClientRect();
   dom.tooltip.style.left = `${event.clientX - wrap.left}px`;
@@ -651,7 +859,7 @@ function endMarkerOffsets(playerSeries, yScale) {
   for (const [name, values] of playerSeries) {
     const last = values[values.length - 1];
     if (!last) continue;
-    const key = Math.round(yScale(last.points));
+    const key = Math.round(yScale(last.chart_points));
     (groups.get(key) || groups.set(key, []).get(key)).push(name);
   }
   const offsets = new Map();
@@ -667,7 +875,7 @@ function overlappingPointOffsets(playerSeries) {
   const groups = new Map();
   for (const [name, values] of playerSeries) {
     for (const row of values) {
-      const signature = `${row.sequence_number}:${row.points}`;
+      const signature = `${row.sequence_number}:${row.chart_points}`;
       (groups.get(signature) || groups.set(signature, []).get(signature)).push(name);
     }
   }
@@ -681,18 +889,53 @@ function overlappingPointOffsets(playerSeries) {
 }
 
 function pointOffset(offsets, name, row) {
-  return offsets.get(`${name}|${row.sequence_number}:${row.points}`) || 0;
+  return offsets.get(`${name}|${row.sequence_number}:${row.chart_points}`) || 0;
+}
+
+function smoothLinePath(points) {
+  if (!points.length) return "";
+  if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
+  if (points.length === 2) return `M ${points[0].x},${points[0].y} L ${points[1].x},${points[1].y}`;
+
+  let path = `M ${points[0].x},${points[0].y}`;
+  for (let index = 1; index < points.length; index += 1) {
+    const point = points[index];
+    if (index === points.length - 1) {
+      path += ` Q ${point.x},${point.y} ${point.x},${point.y}`;
+    } else {
+      const next = points[index + 1];
+      const midX = (point.x + next.x) / 2;
+      const midY = (point.y + next.y) / 2;
+      path += ` Q ${point.x},${point.y} ${midX},${midY}`;
+    }
+  }
+  return path;
+}
+
+function chartDeltaText(delta, countedDelta, pending) {
+  if (delta > 0) {
+    return `deze wedstrijd levert ${delta} ${delta === 1 ? "punt" : "punten"} op`;
+  }
+  if (countedDelta > 0) {
+    return `${countedDelta} ${countedDelta === 1 ? "punt telt" : "punten tellen"} nu mee`;
+  }
+  if (pending > 0) {
+    return `${pending} ${pending === 1 ? "punt staat" : "punten staan"} nog tussen haakjes`;
+  }
+  return "geen puntenmutatie";
 }
 
 function compactInitials(name) {
   return initials(name).replaceAll(".", "");
 }
 
-function makeXTicks(maxX) {
-  if (maxX <= 5) return Array.from({ length: maxX + 1 }, (_, index) => index);
-  const step = Math.max(1, Math.ceil(maxX / 5));
-  const ticks = [0];
-  for (let value = step; value < maxX; value += step) ticks.push(value);
+function makeXTicks(minX, maxX) {
+  if (maxX <= minX) return [minX];
+  const span = maxX - minX;
+  if (span <= 5) return Array.from({ length: span + 1 }, (_, index) => minX + index);
+  const step = Math.max(1, Math.ceil(span / 5));
+  const ticks = [minX];
+  for (let value = minX + step; value < maxX; value += step) ticks.push(value);
   ticks.push(maxX);
   return ticks;
 }
