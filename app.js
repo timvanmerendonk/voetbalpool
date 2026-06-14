@@ -580,7 +580,7 @@ function renderLeaderboard() {
 
 function metric(label, value, helpText = "") {
   const help = helpText
-    ? `<button class="metric-help" type="button" data-help="${escapeHtml(helpText)}" aria-label="${escapeHtml(helpText)}" title="${escapeHtml(helpText)}">?</button>`
+    ? `<button class="metric-help" type="button" data-help="${escapeHtml(helpText)}" aria-label="${escapeHtml(helpText)}">?</button>`
     : "";
   return `<div class="metric"><span>${label}${help}</span><strong>${value}</strong></div>`;
 }
