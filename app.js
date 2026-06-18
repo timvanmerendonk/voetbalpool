@@ -235,17 +235,13 @@ function latestMilestoneComparison() {
   if (!previousLabel && latestLabel === "Start toernooi") {
     return { label: "Nog geen mijlpaal bereikt", rows: [] };
   }
-  const latestRows = lastRowsForMilestone(latestLabel);
-  const previousRows = previousLabel ? lastRowsForMilestone(previousLabel) : [];
-  const previousPoints = new Map(previousRows.map((row) => [row.player_name, Number(row.actual_points || row.points || 0)]));
-  const rows = latestRows
+  const transitionRows = firstRowsForMilestone(latestLabel);
+  const rows = transitionRows
     .map((row) => {
-      const points = Number(row.actual_points || row.points || 0);
-      const previous = previousPoints.get(row.player_name) || 0;
       return {
         name: row.player_name,
-        points,
-        delta: points - previous,
+        points: Number(row.points || 0),
+        delta: Number(row.points_delta || 0),
       };
     })
     .sort((a, b) => b.delta - a.delta || b.points - a.points || a.name.localeCompare(b.name, "nl"))
@@ -256,10 +252,10 @@ function latestMilestoneComparison() {
   return { label, rows };
 }
 
-function lastRowsForMilestone(label) {
+function firstRowsForMilestone(label) {
   const rows = state.history.filter((row) => (row.milestone_label || "Start toernooi") === label);
-  const latestSequence = Math.max(...rows.map((row) => Number(row.sequence_number || 0)), 0);
-  return rows.filter((row) => Number(row.sequence_number || 0) === latestSequence);
+  const firstSequence = Math.min(...rows.map((row) => Number(row.sequence_number || 0)));
+  return rows.filter((row) => Number(row.sequence_number || 0) === firstSequence);
 }
 
 function renderPendingMomentum() {
