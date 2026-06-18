@@ -96,7 +96,6 @@ const state = {
   activePhase: "Group",
   activeTab: "dashboard",
   activeMomentum: "latest",
-  poolRelevantOnly: false,
   playerColors: new Map(),
   pinnedTooltip: null,
 };
@@ -115,7 +114,6 @@ const dom = {
   scheduleList: document.querySelector("#scheduleList"),
   lastUpdated: document.querySelector("#lastUpdated"),
   currentPhaseButton: document.querySelector("#currentPhaseButton"),
-  poolRelevantToggle: document.querySelector("#poolRelevantToggle"),
   testerHome: document.querySelector("#testerHome"),
   testerAway: document.querySelector("#testerAway"),
   testerKnockout: document.querySelector("#testerKnockout"),
@@ -147,7 +145,6 @@ async function init() {
 
     bindTabs();
     bindMomentumTabs();
-    bindScheduleControls();
     bindScoreTester();
     render();
     document.addEventListener("pointerdown", closePinnedTooltipsOnOutsidePress);
@@ -194,13 +191,6 @@ function bindMomentumTabs() {
   });
 }
 
-function bindScheduleControls() {
-  dom.poolRelevantToggle?.addEventListener("change", () => {
-    state.poolRelevantOnly = Boolean(dom.poolRelevantToggle.checked);
-    renderSchedule();
-  });
-}
-
 function renderMomentum() {
   if (!dom.momentumContent) return;
   if (state.activeMomentum === "pending") {
@@ -223,7 +213,7 @@ function renderLatestMomentum() {
   dom.momentumContent.innerHTML = `
     <div class="momentum-kicker">${escapeHtml(comparison.label)}</div>
     <div class="momentum-bars">
-      ${comparison.rows.map((row) => momentumBar(row.name, row.delta, `${row.points} totaal`, maxDelta, "", row.contributions)).join("")}
+      ${comparison.rows.map((row) => momentumBar(row.name, row.delta, "", maxDelta, "", row.contributions)).join("")}
     </div>
   `;
   bindActivityPointTooltips();
@@ -328,10 +318,10 @@ function renderMilestoneMomentum() {
 
 function momentumBar(name, value, detail, maxValue, mode = "", contributions = []) {
   const width = Math.max(3, (Number(value || 0) / maxValue) * 100);
-  const detailMarkup = detail ? `<span>${escapeHtml(detail)}</span>` : "";
-  const contributionHelp = activityContributionTooltip(name, contributions);
-  const valueMarkup = contributionHelp
-    ? `<button class="activity-points" type="button" data-help="${escapeHtml(contributionHelp)}">${value > 0 ? `+${value}` : value}</button>`
+  const detailMarkup = detail ? `<span class="momentum-detail">${escapeHtml(detail)}</span>` : "";
+  const contributionData = JSON.stringify(contributions);
+  const valueMarkup = contributions.length
+    ? `<button class="activity-points" type="button" data-player="${escapeHtml(firstName(name))}" data-contributions="${escapeHtml(contributionData)}">${value > 0 ? `+${value}` : value}</button>`
     : `<b>${value > 0 ? `+${value}` : value}</b>`;
   return `
     <article class="momentum-row ${mode}">
@@ -351,7 +341,7 @@ function activityContributionTooltip(playerName, contributions) {
     .map((row) => `<li><span>${escapeHtml(row.home)} - ${escapeHtml(row.away)}</span><b>+${row.delta}</b></li>`)
     .join("");
   return `
-    <div class="activity-tooltip-title">${escapeHtml(firstName(playerName))}</div>
+    <div class="activity-tooltip-title">${escapeHtml(playerName)}</div>
     <ul class="activity-tooltip-list">${rows}</ul>
   `;
 }
@@ -379,10 +369,6 @@ function chosenTeamCounts() {
     }
   }
   return counts;
-}
-
-function chosenTeamSet() {
-  return new Set(chosenTeamCounts().keys());
 }
 
 function renderUpcomingMatches() {
@@ -573,6 +559,7 @@ function normaliseResults(rows) {
     .sort((a, b) =>
       b.current_points - a.current_points ||
       b.current_goal_difference - a.current_goal_difference ||
+      b.current_goals_scored - a.current_goals_scored ||
       b.win_probability - a.win_probability
     );
 }
@@ -610,6 +597,7 @@ function renderLeaderboard() {
           <div class="leader-metrics">
             ${metric("Punten", player.current_points)}
             ${metric("Doelsaldo", signed(player.current_goal_difference))}
+            ${metric("Goals", player.current_goals_scored)}
             ${metric("Winkans", winChance, winChanceHelp)}
           </div>
         </article>
@@ -757,7 +745,13 @@ function showMetricHelp(event, button) {
 }
 
 function showActivityHelp(event, button) {
-  dom.metricHelpCard.innerHTML = button.dataset.help || "";
+  let contributions = [];
+  try {
+    contributions = JSON.parse(button.dataset.contributions || "[]");
+  } catch {
+    contributions = [];
+  }
+  dom.metricHelpCard.innerHTML = activityContributionTooltip(button.dataset.player || "", contributions);
   dom.metricHelpCard.hidden = false;
   positionMetricHelp(event);
 }
@@ -828,10 +822,8 @@ function renderPhaseScroller() {
 }
 
 function renderSchedule() {
-  const selectedTeams = chosenTeamSet();
   const matches = state.schedule
     .filter((match) => match.stage === state.activePhase)
-    .filter((match) => !state.poolRelevantOnly || isPoolRelevantMatch(match, selectedTeams))
     .sort(compareMatchesByAmsterdamTime);
   if (!matches.length) {
     dom.scheduleList.innerHTML = `<div class="empty-state">Geen wedstrijden gevonden voor deze fase.</div>`;
@@ -847,14 +839,6 @@ function renderSchedule() {
     scheduleGroup("Nog te spelen", upcoming, true),
     played.length ? scheduleGroup("Gespeelde wedstrijden", played, false) : "",
   ].join("");
-}
-
-function isPoolRelevantMatch(match, selectedTeams) {
-  if (selectedTeams.has(match.home_team) || selectedTeams.has(match.away_team) || selectedTeams.has(match.qualified_team)) {
-    return true;
-  }
-  const unresolvedKnockout = match.stage !== "Group" && (isBracketSlot(match.home_team) || isBracketSlot(match.away_team));
-  return match.status !== "Gespeeld" && unresolvedKnockout;
 }
 
 function scheduleGroup(title, matches, open) {
