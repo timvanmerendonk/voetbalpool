@@ -836,8 +836,8 @@ function renderSchedule() {
     return;
   }
   dom.scheduleList.innerHTML = [
-    scheduleGroup("Nog te spelen", upcoming, true),
     played.length ? scheduleGroup("Gespeelde wedstrijden", played, false) : "",
+    scheduleGroup("Nog te spelen", upcoming, true),
   ].join("");
 }
 
