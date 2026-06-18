@@ -1,5 +1,5 @@
 :root {
-  --bg: #edf3f8;
+  --bg: #f5f2ec;
   --grass: #149447;
   --grass-2: #25a85a;
   --sun: #f4b63f;
@@ -60,9 +60,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(rgba(31, 79, 147, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(31, 79, 147, 0.025) 1px, transparent 1px),
-    linear-gradient(180deg, #f8faff 0, var(--bg) 360px);
+    linear-gradient(rgba(72, 87, 104, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(72, 87, 104, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, #fffefa 0, var(--bg) 360px);
   background-size: 48px 48px, 48px 48px, auto;
   color: var(--text);
   font-family: Manrope, "Segoe UI", sans-serif;
@@ -144,29 +144,36 @@ select {
   flex: 0 0 auto;
   border: 3px solid #fff;
   border-radius: 999px;
-  background:
-    linear-gradient(145deg, transparent 0 58%, var(--signal) 59% 68%, transparent 69%),
-    var(--accent);
+  background-color: #fff;
+  background-image: url("./united-2026-ball.png");
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: 100% auto;
   box-shadow: 0 0 0 1px rgba(11, 43, 97, 0.2), 0 8px 18px rgba(31, 79, 147, 0.24);
   color: #fff;
+  overflow: hidden;
 }
 
 .brand-mark span {
   position: relative;
   z-index: 1;
   font-family: "Barlow Condensed", Impact, sans-serif;
-  font-size: 1.65rem;
+  font-size: 1.5rem;
   font-weight: 800;
   line-height: 0.9;
+  text-shadow: 0 1px 5px var(--ink), 0 0 2px var(--ink);
 }
 
 .brand-mark small {
   position: absolute;
-  right: 6px;
-  bottom: 5px;
+  right: 4px;
+  bottom: 4px;
+  border-radius: 2px;
+  background: var(--ink);
   color: #fff;
   font-size: 0.48rem;
   font-weight: 800;
+  padding: 1px 3px;
   z-index: 1;
 }
 
@@ -743,7 +750,7 @@ h3 {
 
 .milestone-step.done b,
 .rules-milestone.done b {
-  background: var(--grass);
+  background: var(--accent);
   color: #fff;
 }
 
