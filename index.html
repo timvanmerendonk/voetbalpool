@@ -4,15 +4,26 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>WK Voetbalpool Overzicht</title>
-    <link rel="stylesheet" href="./styles.css?v=20260618213129" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css?v=20260618214342" />
   </head>
   <body>
     <main class="app-shell">
       <header class="site-header">
+        <div class="tournament-strip">
+          <span class="live-label"><i aria-hidden="true"></i> Live pool</span>
+          <span class="tournament-location">WK 2026 · Verenigde Staten, Canada &amp; Mexico</span>
+          <span>Finale · 19 juli</span>
+        </div>
         <div class="header-main">
-          <div>
-            <p class="eyebrow">WK 2026 Voetbalpool</p>
-            <h1>Voetbalpool-overzicht</h1>
+          <div class="brand-lockup">
+            <div class="brand-mark" aria-hidden="true"><span>26</span><small>WK</small></div>
+            <div class="brand-copy">
+              <p class="eyebrow">WK 2026</p>
+              <h1>Voetbalpool</h1>
+            </div>
           </div>
           <div class="status-pill" id="lastUpdated">Data laden...</div>
         </div>
@@ -174,7 +185,7 @@
       </section>
     </main>
 
-    <script src="./dashboard_data.js?v=20260618213129"></script>
-    <script src="./app.js?v=20260618213129"></script>
+    <script src="./dashboard_data.js?v=20260618214342"></script>
+    <script src="./app.js?v=20260618214342"></script>
   </body>
 </html>
