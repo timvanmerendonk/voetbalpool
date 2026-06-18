@@ -273,7 +273,7 @@ function renderPendingMomentum() {
     .slice(0, 8);
   const maxPending = Math.max(...rows.map((row) => row.pending), 1);
   dom.momentumContent.innerHTML = `
-    <div class="momentum-kicker">Verdiend, maar nog niet officieel meegeteld</div>
+    <div class="momentum-kicker">Verdiend, maar telt pas mee als de volgende mijlpaal is bereikt</div>
     <div class="momentum-bars">
       ${rows.map((row) => momentumBar(row.name, row.pending, "", maxPending, "pending", row.contributions)).join("")}
     </div>
