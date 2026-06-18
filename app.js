@@ -320,11 +320,14 @@ function momentumBar(name, value, detail, maxValue, mode = "", contributions = [
   const width = Math.max(3, (Number(value || 0) / maxValue) * 100);
   const detailMarkup = detail ? `<span class="momentum-detail">${escapeHtml(detail)}</span>` : "";
   const contributionData = JSON.stringify(contributions);
+  const contributionAttrs = contributions.length
+    ? ` data-player="${escapeHtml(firstName(name))}" data-contributions="${escapeHtml(contributionData)}"`
+    : "";
   const valueMarkup = contributions.length
-    ? `<button class="activity-points" type="button" data-player="${escapeHtml(firstName(name))}" data-contributions="${escapeHtml(contributionData)}">${value > 0 ? `+${value}` : value}</button>`
+    ? `<button class="activity-points" type="button" aria-label="Bekijk welke wedstrijden deze punten opleverden">${value > 0 ? `+${value}` : value}</button>`
     : `<b>${value > 0 ? `+${value}` : value}</b>`;
   return `
-    <article class="momentum-row ${mode}">
+    <article class="momentum-row ${mode} ${contributions.length ? "has-contributions" : ""}"${contributionAttrs}>
       <div>
         <strong>${escapeHtml(name)}</strong>
         ${detailMarkup}
@@ -706,9 +709,9 @@ function bindActivityPointTooltips() {
     dom.metricHelpCard.hidden = true;
     document.body.appendChild(dom.metricHelpCard);
   }
-  document.querySelectorAll(".activity-points").forEach((button) => {
+  document.querySelectorAll(".momentum-row.has-contributions").forEach((row) => {
     const openHelp = (event) => {
-      if (!state.pinnedTooltip || state.pinnedTooltip === "metric") showActivityHelp(event, button);
+      if (!state.pinnedTooltip || state.pinnedTooltip === "metric") showActivityHelp(event, row);
     };
     const moveHelp = (event) => {
       if (state.pinnedTooltip !== "metric") positionMetricHelp(event);
@@ -716,14 +719,23 @@ function bindActivityPointTooltips() {
     const closeHelp = () => {
       if (state.pinnedTooltip !== "metric") dom.metricHelpCard.hidden = true;
     };
-    button.addEventListener("pointerenter", openHelp);
-    button.addEventListener("pointerover", openHelp);
-    button.addEventListener("mouseenter", openHelp);
-    button.addEventListener("mouseover", openHelp);
-    button.addEventListener("pointermove", moveHelp);
-    button.addEventListener("mousemove", moveHelp);
-    button.addEventListener("pointerleave", closeHelp);
-    button.addEventListener("mouseleave", closeHelp);
+    row.addEventListener("pointerenter", openHelp);
+    row.addEventListener("pointerover", openHelp);
+    row.addEventListener("mouseenter", openHelp);
+    row.addEventListener("mouseover", openHelp);
+    row.addEventListener("pointermove", moveHelp);
+    row.addEventListener("mousemove", moveHelp);
+    row.addEventListener("pointerleave", closeHelp);
+    row.addEventListener("mouseleave", closeHelp);
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (dom.hoverCard) dom.hoverCard.hidden = true;
+      if (dom.tooltip) dom.tooltip.hidden = true;
+      showActivityHelp(event, row);
+      state.pinnedTooltip = "metric";
+    });
+  });
+  document.querySelectorAll(".activity-points").forEach((button) => {
     button.addEventListener("focus", (event) => showActivityHelp(event, button));
     button.addEventListener("blur", () => {
       if (state.pinnedTooltip !== "metric") dom.metricHelpCard.hidden = true;
@@ -744,14 +756,15 @@ function showMetricHelp(event, button) {
   positionMetricHelp(event);
 }
 
-function showActivityHelp(event, button) {
+function showActivityHelp(event, target) {
+  const source = target.closest?.("[data-contributions]") || target;
   let contributions = [];
   try {
-    contributions = JSON.parse(button.dataset.contributions || "[]");
+    contributions = JSON.parse(source.dataset.contributions || "[]");
   } catch {
     contributions = [];
   }
-  dom.metricHelpCard.innerHTML = activityContributionTooltip(button.dataset.player || "", contributions);
+  dom.metricHelpCard.innerHTML = activityContributionTooltip(source.dataset.player || "", contributions);
   dom.metricHelpCard.hidden = false;
   positionMetricHelp(event);
 }

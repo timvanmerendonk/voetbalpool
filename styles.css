@@ -473,6 +473,11 @@ h3 {
   padding: 3px 0;
 }
 
+.momentum-row.has-contributions .bar-wrap,
+.momentum-row.has-contributions .activity-points {
+  cursor: help;
+}
+
 .activity-points:focus-visible {
   border-radius: 4px;
   outline: 2px solid var(--accent);
