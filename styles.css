@@ -4,6 +4,7 @@
   --grass-2: #25a85a;
   --sun: #f4b63f;
   --signal: #f47a2a;
+  --signal-strong: #c95318;
   --sky: #e7eff9;
   --panel: #ffffff;
   --text: #17243a;
@@ -59,10 +60,10 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(rgba(31, 79, 147, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(31, 79, 147, 0.045) 1px, transparent 1px),
+    linear-gradient(rgba(31, 79, 147, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 79, 147, 0.025) 1px, transparent 1px),
     linear-gradient(180deg, #f8faff 0, var(--bg) 360px);
-  background-size: 42px 42px, 42px 42px, auto;
+  background-size: 48px 48px, 48px 48px, auto;
   color: var(--text);
   font-family: Manrope, "Segoe UI", sans-serif;
   letter-spacing: 0;
@@ -175,7 +176,7 @@ select {
 
 .eyebrow {
   margin: 0 0 2px;
-  color: var(--signal);
+  color: var(--signal-strong);
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -210,7 +211,7 @@ h2 {
   width: 4px;
   height: 18px;
   flex: 0 0 auto;
-  background: var(--signal);
+  background: var(--accent);
 }
 
 h3 {
@@ -377,7 +378,7 @@ h3 {
 }
 
 .leader-row:hover {
-  border-left-color: var(--signal);
+  border-left-color: var(--accent);
   box-shadow: 0 8px 20px rgba(11, 43, 97, 0.08);
   transform: translateY(-1px);
 }
@@ -406,6 +407,10 @@ h3 {
   font-size: 0.72rem;
   border: 2px solid #fff;
   box-shadow: 0 0 0 1px rgba(11, 43, 97, 0.14), 0 7px 14px rgba(11, 43, 97, 0.11);
+}
+
+.leader-row:first-child .player-avatar {
+  color: #382b08;
 }
 
 .player-info,
@@ -697,7 +702,7 @@ h3 {
 .progress-track {
   height: 9px;
   border-radius: 999px;
-  background: #edf2ef;
+  background: #e5ebf2;
   margin-bottom: 14px;
   overflow: hidden;
 }
@@ -706,7 +711,7 @@ h3 {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--grass), var(--signal));
+  background: var(--accent);
 }
 
 .milestone-list,
@@ -731,21 +736,21 @@ h3 {
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  background: #eef2f0;
+  background: #edf1f5;
   color: var(--muted);
   font-size: 0.78rem;
 }
 
 .milestone-step.done b,
 .rules-milestone.done b {
-  background: var(--accent);
+  background: var(--grass);
   color: #fff;
 }
 
 .milestone-step.current b,
 .rules-milestone.current b {
-  background: var(--sun);
-  color: #3f3411;
+  background: var(--signal);
+  color: #fff;
 }
 
 .upcoming-list {
