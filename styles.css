@@ -145,36 +145,13 @@ select {
   border: 3px solid #fff;
   border-radius: 999px;
   background-color: #fff;
-  background-image: url("./united-2026-ball.png");
-  background-position: center top;
+  background-image: url("./wk26-dashboard-ball.png");
+  background-position: center;
   background-repeat: no-repeat;
   background-size: 100% auto;
   box-shadow: 0 0 0 1px rgba(11, 43, 97, 0.2), 0 8px 18px rgba(31, 79, 147, 0.24);
   color: #fff;
   overflow: hidden;
-}
-
-.brand-mark span {
-  position: relative;
-  z-index: 1;
-  font-family: "Barlow Condensed", Impact, sans-serif;
-  font-size: 1.5rem;
-  font-weight: 800;
-  line-height: 0.9;
-  text-shadow: 0 1px 5px var(--ink), 0 0 2px var(--ink);
-}
-
-.brand-mark small {
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  border-radius: 2px;
-  background: var(--ink);
-  color: #fff;
-  font-size: 0.48rem;
-  font-weight: 800;
-  padding: 1px 3px;
-  z-index: 1;
 }
 
 .brand-copy {
