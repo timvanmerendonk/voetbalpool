@@ -223,9 +223,10 @@ function renderLatestMomentum() {
   dom.momentumContent.innerHTML = `
     <div class="momentum-kicker">${escapeHtml(comparison.label)}</div>
     <div class="momentum-bars">
-      ${comparison.rows.map((row) => momentumBar(row.name, row.delta, `${row.points} totaal`, maxDelta)).join("")}
+      ${comparison.rows.map((row) => momentumBar(row.name, row.delta, `${row.points} totaal`, maxDelta, "", row.contributions)).join("")}
     </div>
   `;
+  bindActivityPointTooltips();
 }
 
 function latestMilestoneComparison() {
@@ -235,6 +236,10 @@ function latestMilestoneComparison() {
   if (!previousLabel && latestLabel === "Start toernooi") {
     return { label: "Nog geen mijlpaal bereikt", rows: [] };
   }
+  const previousSequence = previousLabel && previousLabel !== "Start toernooi"
+    ? milestoneTransitionSequence(previousLabel)
+    : 0;
+  const latestSequence = milestoneTransitionSequence(latestLabel);
   const transitionRows = firstRowsForMilestone(latestLabel);
   const rows = transitionRows
     .map((row) => {
@@ -242,6 +247,7 @@ function latestMilestoneComparison() {
         name: row.player_name,
         points: Number(row.points || 0),
         delta: Number(row.points_delta || 0),
+        contributions: playerPointContributions(row.player_name, previousSequence, latestSequence),
       };
     })
     .sort((a, b) => b.delta - a.delta || b.points - a.points || a.name.localeCompare(b.name, "nl"))
@@ -258,12 +264,20 @@ function firstRowsForMilestone(label) {
   return rows.filter((row) => Number(row.sequence_number || 0) === firstSequence);
 }
 
+function milestoneTransitionSequence(label) {
+  const rows = firstRowsForMilestone(label);
+  return Math.min(...rows.map((row) => Number(row.sequence_number || 0)));
+}
+
 function renderPendingMomentum() {
+  const currentLabel = state.results[0]?.current_milestone_label || "Start toernooi";
+  const latestSequence = currentLabel === "Start toernooi" ? 0 : milestoneTransitionSequence(currentLabel);
   const rows = state.results
     .map((player) => ({
       name: player.name,
       pending: Number(player.current_pending_points || 0),
       actual: Number(player.actual_current_points || player.current_points || 0),
+      contributions: playerPointContributions(player.name, latestSequence),
     }))
     .sort((a, b) => b.pending - a.pending || b.actual - a.actual || a.name.localeCompare(b.name, "nl"))
     .slice(0, 8);
@@ -271,9 +285,24 @@ function renderPendingMomentum() {
   dom.momentumContent.innerHTML = `
     <div class="momentum-kicker">Verdiend, maar nog niet officieel meegeteld</div>
     <div class="momentum-bars">
-      ${rows.map((row) => momentumBar(row.name, row.pending, "", maxPending, "pending")).join("")}
+      ${rows.map((row) => momentumBar(row.name, row.pending, "", maxPending, "pending", row.contributions)).join("")}
     </div>
   `;
+  bindActivityPointTooltips();
+}
+
+function playerPointContributions(playerName, afterSequence, throughSequence = Number.MAX_SAFE_INTEGER) {
+  return state.history
+    .filter((row) => row.player_name === playerName)
+    .filter((row) => Number(row.sequence_number || 0) > afterSequence)
+    .filter((row) => Number(row.sequence_number || 0) <= throughSequence)
+    .map((row) => ({
+      sequence: Number(row.sequence_number || 0),
+      home: row.home_team,
+      away: row.away_team,
+      delta: Number(row.actual_points_delta || 0),
+    }))
+    .filter((row) => row.delta > 0);
 }
 
 function renderMilestoneMomentum() {
@@ -297,9 +326,13 @@ function renderMilestoneMomentum() {
   `;
 }
 
-function momentumBar(name, value, detail, maxValue, mode = "") {
+function momentumBar(name, value, detail, maxValue, mode = "", contributions = []) {
   const width = Math.max(3, (Number(value || 0) / maxValue) * 100);
   const detailMarkup = detail ? `<span>${escapeHtml(detail)}</span>` : "";
+  const contributionHelp = activityContributionTooltip(name, contributions);
+  const valueMarkup = contributionHelp
+    ? `<button class="activity-points" type="button" data-help="${escapeHtml(contributionHelp)}">${value > 0 ? `+${value}` : value}</button>`
+    : `<b>${value > 0 ? `+${value}` : value}</b>`;
   return `
     <article class="momentum-row ${mode}">
       <div>
@@ -307,8 +340,19 @@ function momentumBar(name, value, detail, maxValue, mode = "") {
         ${detailMarkup}
       </div>
       <div class="bar-wrap"><span style="width:${width}%"></span></div>
-      <b>${value > 0 ? `+${value}` : value}</b>
+      ${valueMarkup}
     </article>
+  `;
+}
+
+function activityContributionTooltip(playerName, contributions) {
+  if (!contributions.length) return "";
+  const rows = contributions
+    .map((row) => `<li><span>${escapeHtml(row.home)} - ${escapeHtml(row.away)}</span><b>+${row.delta}</b></li>`)
+    .join("");
+  return `
+    <div class="activity-tooltip-title">${escapeHtml(firstName(playerName))}</div>
+    <ul class="activity-tooltip-list">${rows}</ul>
   `;
 }
 
@@ -667,8 +711,53 @@ function bindMetricHelpTooltips() {
   });
 }
 
+function bindActivityPointTooltips() {
+  if (!dom.metricHelpCard) {
+    dom.metricHelpCard = document.createElement("div");
+    dom.metricHelpCard.className = "metric-help-card";
+    dom.metricHelpCard.hidden = true;
+    document.body.appendChild(dom.metricHelpCard);
+  }
+  document.querySelectorAll(".activity-points").forEach((button) => {
+    const openHelp = (event) => {
+      if (!state.pinnedTooltip || state.pinnedTooltip === "metric") showActivityHelp(event, button);
+    };
+    const moveHelp = (event) => {
+      if (state.pinnedTooltip !== "metric") positionMetricHelp(event);
+    };
+    const closeHelp = () => {
+      if (state.pinnedTooltip !== "metric") dom.metricHelpCard.hidden = true;
+    };
+    button.addEventListener("pointerenter", openHelp);
+    button.addEventListener("pointerover", openHelp);
+    button.addEventListener("mouseenter", openHelp);
+    button.addEventListener("mouseover", openHelp);
+    button.addEventListener("pointermove", moveHelp);
+    button.addEventListener("mousemove", moveHelp);
+    button.addEventListener("pointerleave", closeHelp);
+    button.addEventListener("mouseleave", closeHelp);
+    button.addEventListener("focus", (event) => showActivityHelp(event, button));
+    button.addEventListener("blur", () => {
+      if (state.pinnedTooltip !== "metric") dom.metricHelpCard.hidden = true;
+    });
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (dom.hoverCard) dom.hoverCard.hidden = true;
+      if (dom.tooltip) dom.tooltip.hidden = true;
+      showActivityHelp(event, button);
+      state.pinnedTooltip = "metric";
+    });
+  });
+}
+
 function showMetricHelp(event, button) {
   dom.metricHelpCard.textContent = button.dataset.help || "";
+  dom.metricHelpCard.hidden = false;
+  positionMetricHelp(event);
+}
+
+function showActivityHelp(event, button) {
+  dom.metricHelpCard.innerHTML = button.dataset.help || "";
   dom.metricHelpCard.hidden = false;
   positionMetricHelp(event);
 }
@@ -1077,7 +1166,7 @@ function closePinnedTooltipsOnOutsidePress(event) {
   const target = event.target;
   const isPickedTeam = Boolean(target.closest?.(".picked-team"));
   const isTeamTooltip = Boolean(target.closest?.(".team-hover-card"));
-  const isMetricHelp = Boolean(target.closest?.(".metric-help"));
+  const isMetricHelp = Boolean(target.closest?.(".metric-help, .activity-points"));
   const isMetricTooltip = Boolean(target.closest?.(".metric-help-card"));
   const isChartTarget = Boolean(target.closest?.("#pointsChart circle[data-name], #pointsChart .chart-end-marker[data-name]"));
   const isChartTooltip = Boolean(target.closest?.("#chartTooltip"));

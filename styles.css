@@ -456,8 +456,61 @@ h3 {
   font-size: 0.9rem;
 }
 
-.momentum-row b {
+.momentum-row b,
+.activity-points {
   justify-self: end;
+  color: var(--accent);
+}
+
+.activity-points {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: help;
+  font: inherit;
+  font-weight: 780;
+  line-height: 1;
+  padding: 3px 0;
+}
+
+.activity-points:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.momentum-row.pending .activity-points {
+  color: #6b7280;
+}
+
+.activity-tooltip-title {
+  font-weight: 780;
+  margin-bottom: 8px;
+}
+
+.activity-tooltip-list {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity-tooltip-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.activity-tooltip-list span {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-tooltip-list b {
   color: var(--accent);
 }
 
