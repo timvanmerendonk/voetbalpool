@@ -1,22 +1,23 @@
 :root {
-  --bg: #f3f5f1;
-  --grass: #0b6b50;
-  --grass-2: #16906a;
-  --sun: #f2c14e;
-  --signal: #f56f3a;
-  --sky: #eaf2f7;
+  --bg: #edf3f8;
+  --grass: #149447;
+  --grass-2: #25a85a;
+  --sun: #f4b63f;
+  --signal: #f47a2a;
+  --sky: #e7eff9;
   --panel: #ffffff;
-  --text: #17231f;
-  --muted: #66716d;
-  --line: #dce3df;
-  --soft: #f0f3f1;
-  --accent: #0c6a52;
-  --accent-soft: #e6f3ed;
-  --blue: #2563eb;
+  --text: #17243a;
+  --muted: #66758a;
+  --line: #d7e0eb;
+  --soft: #eff3f8;
+  --accent: #1f4f93;
+  --accent-soft: #e7eff9;
+  --blue: #1f4f93;
   --amber: #b7791f;
-  --rose: #c2415f;
-  --ink: #10251f;
-  --shadow: 0 8px 24px rgba(20, 41, 34, 0.07);
+  --rose: #d92733;
+  --indigo: #31357d;
+  --ink: #0b2b61;
+  --shadow: 0 8px 24px rgba(11, 43, 97, 0.08);
   --radius: 6px;
   --gap: 18px;
 }
@@ -58,9 +59,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(rgba(16, 37, 31, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 37, 31, 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, #f8faf7 0, var(--bg) 360px);
+    linear-gradient(rgba(31, 79, 147, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 79, 147, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, #f8faff 0, var(--bg) 360px);
   background-size: 42px 42px, 42px 42px, auto;
   color: var(--text);
   font-family: Manrope, "Segoe UI", sans-serif;
@@ -82,10 +83,10 @@ select {
 .site-header {
   display: grid;
   margin-bottom: 22px;
-  border: 1px solid rgba(16, 37, 31, 0.14);
+  border: 1px solid rgba(11, 43, 97, 0.16);
   border-top: 0;
   background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 10px 28px rgba(16, 37, 31, 0.08);
+  box-shadow: 0 10px 28px rgba(11, 43, 97, 0.1);
 }
 
 .tournament-strip {
@@ -145,11 +146,13 @@ select {
   background:
     linear-gradient(145deg, transparent 0 58%, var(--signal) 59% 68%, transparent 69%),
     var(--accent);
-  box-shadow: 0 0 0 1px rgba(16, 37, 31, 0.16), 0 8px 18px rgba(12, 106, 82, 0.2);
+  box-shadow: 0 0 0 1px rgba(11, 43, 97, 0.2), 0 8px 18px rgba(31, 79, 147, 0.24);
   color: #fff;
 }
 
 .brand-mark span {
+  position: relative;
+  z-index: 1;
   font-family: "Barlow Condensed", Impact, sans-serif;
   font-size: 1.65rem;
   font-weight: 800;
@@ -163,6 +166,7 @@ select {
   color: #fff;
   font-size: 0.48rem;
   font-weight: 800;
+  z-index: 1;
 }
 
 .brand-copy {
@@ -237,7 +241,7 @@ h3 {
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--grass);
 }
 
 .ghost-button,
@@ -374,7 +378,7 @@ h3 {
 
 .leader-row:hover {
   border-left-color: var(--signal);
-  box-shadow: 0 8px 20px rgba(16, 37, 31, 0.07);
+  box-shadow: 0 8px 20px rgba(11, 43, 97, 0.08);
   transform: translateY(-1px);
 }
 
@@ -401,7 +405,7 @@ h3 {
   color: #fff;
   font-size: 0.72rem;
   border: 2px solid #fff;
-  box-shadow: 0 0 0 1px rgba(16, 37, 31, 0.12), 0 7px 14px rgba(31, 41, 37, 0.1);
+  box-shadow: 0 0 0 1px rgba(11, 43, 97, 0.14), 0 7px 14px rgba(11, 43, 97, 0.11);
 }
 
 .player-info,
@@ -551,7 +555,7 @@ h3 {
 .segment.active {
   background: var(--ink);
   color: #fff;
-  box-shadow: 0 5px 14px rgba(16, 37, 31, 0.14);
+  box-shadow: 0 5px 14px rgba(11, 43, 97, 0.18);
 }
 
 .momentum-content {
@@ -679,7 +683,7 @@ h3 {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   border-left: 4px solid var(--signal);
-  background: #eef6f2;
+  background: var(--accent-soft);
   padding: 12px;
   margin-bottom: 12px;
 }
