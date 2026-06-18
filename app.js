@@ -105,6 +105,7 @@ const state = {
   activeMomentum: "milestones",
   playerColors: new Map(),
   pinnedTooltip: null,
+  lastConfettiAt: 0,
 };
 
 const dom = {
@@ -648,6 +649,48 @@ function renderLeaderboard() {
     .join("");
   bindPickedTeamTooltips();
   bindMetricHelpTooltips();
+  bindLeaderConfetti();
+}
+
+function bindLeaderConfetti() {
+  const leaderRow = dom.leaderboard.querySelector(".leader-row");
+  if (!leaderRow) return;
+  const celebrate = () => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const now = Date.now();
+    if (now - state.lastConfettiAt < 2000) return;
+    state.lastConfettiAt = now;
+    launchLeaderConfetti(leaderRow);
+  };
+  leaderRow.addEventListener("pointerenter", celebrate);
+  leaderRow.addEventListener("click", celebrate);
+}
+
+function launchLeaderConfetti(origin) {
+  const colors = ["#f4b63f", "#f47a2a", "#149447", "#1f4f93", "#d92733", "#ffffff"];
+  const rect = origin.getBoundingClientRect();
+  const originX = rect.left + rect.width / 2;
+  const originY = rect.top + Math.min(rect.height / 2, 56);
+  const layer = document.createElement("div");
+  layer.className = "confetti-layer";
+  layer.setAttribute("aria-hidden", "true");
+  for (let index = 0; index < 56; index += 1) {
+    const piece = document.createElement("i");
+    const horizontalReach = Math.min(window.innerWidth * 0.9, 920);
+    const verticalReach = Math.min(window.innerHeight * 0.65, 540);
+    piece.style.left = `${originX}px`;
+    piece.style.top = `${originY}px`;
+    piece.style.backgroundColor = colors[index % colors.length];
+    piece.style.setProperty("--confetti-x", `${(Math.random() - 0.5) * horizontalReach}px`);
+    piece.style.setProperty("--confetti-y", `${-90 + Math.random() * verticalReach}px`);
+    piece.style.setProperty("--confetti-turn", `${360 + Math.random() * 900}deg`);
+    piece.style.setProperty("--confetti-delay", `${Math.random() * 180}ms`);
+    piece.style.setProperty("--confetti-duration", `${1250 + Math.random() * 550}ms`);
+    if (index % 3 === 0) piece.classList.add("round");
+    layer.appendChild(piece);
+  }
+  document.body.appendChild(layer);
+  window.setTimeout(() => layer.remove(), 2400);
 }
 
 function metric(label, value, helpText = "") {
