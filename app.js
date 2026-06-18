@@ -95,7 +95,7 @@ const state = {
   history: [],
   activePhase: "Group",
   activeTab: "dashboard",
-  activeMomentum: "latest",
+  activeMomentum: "milestones",
   playerColors: new Map(),
   pinnedTooltip: null,
 };
