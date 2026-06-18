@@ -119,6 +119,7 @@ const dom = {
   upcomingList: document.querySelector("#upcomingList"),
   phaseScroller: document.querySelector("#phaseScroller"),
   scheduleList: document.querySelector("#scheduleList"),
+  tickerTrack: document.querySelector("#tickerTrack"),
   lastUpdated: document.querySelector("#lastUpdated"),
   currentPhaseButton: document.querySelector("#currentPhaseButton"),
   testerHome: document.querySelector("#testerHome"),
@@ -168,12 +169,45 @@ function render() {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(generatedAt)}`;
+  renderTicker();
   renderLeaderboard();
   renderMomentum();
   renderUpcomingMatches();
   renderPhaseScroller();
   renderSchedule();
   renderRules();
+}
+
+function renderTicker() {
+  if (!dom.tickerTrack) return;
+  const participantCount = state.players.length || state.results.length;
+  const upcoming = state.schedule
+    .filter((match) => match.status !== "Gespeeld")
+    .sort(compareMatchesByAmsterdamTime)[0];
+  const leader = state.results[0];
+  const playedCount = state.schedule.filter((match) => match.status === "Gespeeld").length;
+  const nextMatch = upcoming
+    ? `${displayTeamName(upcoming.home_team)} - ${displayTeamName(upcoming.away_team)}`
+    : "Toernooi afgerond";
+  const nextDate = upcoming ? amsterdamMatchDate(upcoming) : null;
+  const nextTime = nextDate ? ` om ${formatAmsterdamTime(nextDate)}` : "";
+  const tickerItems = [
+    `<span class="ticker-item"><i class="ticker-live-dot" aria-hidden="true"></i><strong>Live pool</strong></span>`,
+    `<span class="ticker-item"><strong>${participantCount}</strong> deelnemers</span>`,
+    `<span class="ticker-item">Aankomende wedstrijd: <strong>${escapeHtml(nextMatch)}</strong>${escapeHtml(nextTime)}</span>`,
+    `<span class="ticker-item"><strong>${daysUntilFinal()}</strong> dagen tot de finale</span>`,
+    leader ? `<span class="ticker-item">Koploper: <strong>${escapeHtml(leader.name)}</strong> met ${leader.current_points} punten</span>` : "",
+    `<span class="ticker-item"><strong>${playedCount}</strong> van ${state.schedule.length} wedstrijden gespeeld</span>`,
+  ].filter(Boolean).join("");
+  dom.tickerTrack.innerHTML = `
+    <div class="ticker-group">${tickerItems}</div>
+    <div class="ticker-group" aria-hidden="true">${tickerItems}</div>
+  `;
+}
+
+function daysUntilFinal() {
+  const finalKickoff = new Date("2026-07-19T18:00:00+02:00");
+  return Math.max(0, Math.ceil((finalKickoff.getTime() - Date.now()) / 86400000));
 }
 
 function bindTabs() {
@@ -247,8 +281,7 @@ function latestMilestoneComparison() {
         contributions: playerPointContributions(row.player_name, previousSequence, latestSequence),
       };
     })
-    .sort((a, b) => b.delta - a.delta || b.points - a.points || a.name.localeCompare(b.name, "nl"))
-    .slice(0, 8);
+    .sort((a, b) => b.delta - a.delta || b.points - a.points || a.name.localeCompare(b.name, "nl"));
   const label = previousLabel
     ? `${previousLabel} naar ${latestLabel}`
     : `Sinds ${latestLabel.toLowerCase()}`;
@@ -276,8 +309,7 @@ function renderPendingMomentum() {
       actual: Number(player.actual_current_points || player.current_points || 0),
       contributions: playerPointContributions(player.name, latestSequence),
     }))
-    .sort((a, b) => b.pending - a.pending || b.actual - a.actual || a.name.localeCompare(b.name, "nl"))
-    .slice(0, 8);
+    .sort((a, b) => b.pending - a.pending || b.actual - a.actual || a.name.localeCompare(b.name, "nl"));
   const maxPending = Math.max(...rows.map((row) => row.pending), 1);
   dom.momentumContent.innerHTML = `
     <div class="momentum-kicker">Verdiend, maar telt pas mee als de volgende mijlpaal is bereikt</div>

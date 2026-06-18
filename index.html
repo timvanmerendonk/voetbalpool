@@ -7,15 +7,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css?v=20260618222000" />
+    <link rel="stylesheet" href="./styles.css?v=20260618222608" />
   </head>
   <body>
     <main class="app-shell">
       <header class="site-header">
-        <div class="tournament-strip">
-          <span class="live-label"><i aria-hidden="true"></i> Live pool</span>
-          <span class="tournament-location">WK 2026 · Verenigde Staten, Canada &amp; Mexico</span>
-          <span>Finale · 19 juli</span>
+        <div class="tournament-strip" aria-label="Actuele poolinformatie">
+          <div class="ticker-mask">
+            <div class="ticker-track" id="tickerTrack">
+              <span class="ticker-loading">Poolinformatie laden...</span>
+            </div>
+          </div>
         </div>
         <div class="header-main">
           <div class="brand-lockup">
@@ -185,7 +187,7 @@
       </section>
     </main>
 
-    <script src="./dashboard_data.js?v=20260618222000"></script>
-    <script src="./app.js?v=20260618222000"></script>
+    <script src="./dashboard_data.js?v=20260618222608"></script>
+    <script src="./app.js?v=20260618222608"></script>
   </body>
 </html>

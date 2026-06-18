@@ -91,32 +91,107 @@ select {
 }
 
 .tournament-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  position: relative;
   min-height: 30px;
+  overflow: hidden;
   background: var(--ink);
   color: rgba(255, 255, 255, 0.72);
-  padding: 6px 22px;
+  padding: 0;
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
-.live-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: #fff;
+.ticker-mask {
+  width: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22px, #000 calc(100% - 22px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 22px, #000 calc(100% - 22px), transparent);
 }
 
-.live-label i {
+.ticker-track {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  will-change: transform;
+  animation: ticker-scroll 42s linear infinite;
+}
+
+.ticker-group {
+  display: flex;
+  align-items: center;
+  flex: none;
+  min-height: 30px;
+  padding-right: 48px;
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.ticker-item + .ticker-item::before {
+  width: 4px;
+  height: 4px;
+  margin: 0 18px;
+  border-radius: 999px;
+  background: var(--signal);
+  content: "";
+}
+
+.ticker-item strong {
+  color: #fff;
+  font-weight: 800;
+}
+
+.ticker-live-dot {
   width: 7px;
   height: 7px;
+  margin-right: 2px;
   border-radius: 999px;
   background: var(--signal);
   box-shadow: 0 0 0 4px rgba(245, 111, 58, 0.15);
+}
+
+.ticker-loading {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 22px;
+}
+
+.tournament-strip:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+@keyframes ticker-scroll {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-mask {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+    scrollbar-width: none;
+  }
+
+  .ticker-mask::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ticker-track {
+    animation: none;
+  }
+
+  .ticker-group[aria-hidden="true"] {
+    display: none;
+  }
 }
 
 .header-main {
@@ -1369,11 +1444,11 @@ h3 {
   }
 
   .tournament-strip {
-    padding-inline: 14px;
+    font-size: 0.65rem;
   }
 
-  .tournament-location {
-    display: none;
+  .ticker-item + .ticker-item::before {
+    margin-inline: 14px;
   }
 
   .header-main {
